@@ -14,6 +14,82 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 creds = None
 service = None
 
+region = 'vi'
+# region = 'gb'  # Global format
+
+VietnamWeekDay = {
+    "Mon":"Thứ hai",
+    "Tue":"Thứ ba",
+    "Wed":"Thứ tư",
+    "Thu":"Thứ năm",
+    "Fri":"Thứ sáu",
+    "Sat":"Thứ bảy",
+    "Sun":"Chủ nhật"
+}
+
+GlobalWeekDay = {
+    "Mon":"Monday",
+    "Tue":"Tuesday",
+    "Wed":"Wednesday",
+    "Thu":"Thursday",
+    "Fri":"Friday",
+    "Sat":"Saturday",
+    "Sun":"Sunday"
+}
+
+VietnamMonth = {
+    "Jan":"Tháng 1",
+    "Feb":"Tháng 2",
+    "Mar":"Tháng 3",
+    "Apr":"Tháng 4",
+    "May":"Tháng 5",
+    "Jun":"Tháng 6",
+    "Jul":"Tháng 7",
+    "Aug":"Tháng 8",
+    "Sep":"Tháng 9",
+    "Oct":"Tháng 10",
+    "Nov":"Tháng 11",
+    "Dec":"Tháng 12"
+}
+
+GlobalMonth = {
+    "Jan":"January",
+    "Feb":"Febuary",
+    "Mar":"March",
+    "Apr":"April",
+    "May":"May",
+    "Jun":"June",
+    "Jul":"July",
+    "Aug":"August",
+    "Sep":"September",
+    "Oct":"October",
+    "Nov":"November",
+    "Dec":"December"
+}
+
+def DateTime_to_TimeDict(dt:datetime): 
+    date,time = dt.__str__().split()
+    date = date.split('-')
+    time,timezone = time.split('+')
+    time = time.split(':')
+    
+    if region == 'vi':
+        weekday = VietnamWeekDay[dt.ctime().split()[0]]
+    else :
+        weekday = GlobalWeekDay[dt.ctime().split()[0]]
+
+    dt_dict = {
+        "weekday": weekday,
+        "day": date[2],
+        "month": date[1],
+        "year": date[0],
+        "hour": time[0],
+        "minute": time[1],
+        "second": time[2],
+        "timezone": timezone
+    }
+
+
 def SchedulerStart():
     global creds,service
 
@@ -124,8 +200,14 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
                     
                     result = result + f"{cal_name}:\n"
                     for event in events:
+
                         start = event['start'].get('dateTime', event['start'].get('date'))
+                        start = datetime.datetime.fromisoformat(start)
+                        # start_date,start_time =  
+
                         end = event['end'].get('dateTime', event['end'].get('date'))
+                        end = datetime.datetime.fromisoformat(end)
+
                         print(f"[{start} ---> {end} ]: {event.get("summary", "No Title")}")
                         result = result + f"[{start} ---> {end} ]: {event.get("summary", "No Title")}\n"
                     
