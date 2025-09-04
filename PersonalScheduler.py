@@ -78,6 +78,47 @@ GlobalMonth = {
     "Dec":"December"
 }
 
+def normalize_date_string(date_str: str) -> str:
+    """
+    Chuẩn hóa chuỗi ngày về dạng ISO `YYYY-MM-DD`
+    - Nếu input đã là ISO thì trả nguyên.
+    - Nếu input là dd/mm/yyyy thì đổi sang yyyy-mm-dd.
+    """
+    try:
+        # Trường hợp đã là ISO
+        datetime.datetime.fromisoformat(date_str)
+        return date_str
+    except ValueError:
+        pass
+
+    # Trường hợp dd/mm/yyyy
+    if "/" in date_str:
+        try:
+            day, month, year = date_str.split("/")
+            return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        except Exception:
+            raise ValueError(f"Không nhận diện được định dạng ngày: {date_str}")
+
+    raise ValueError(f"Định dạng ngày không hợp lệ: {date_str}")
+
+def iso_to_vn_date(date_str: str) -> str:
+    """
+    Chuyển ngày ISO (YYYY-MM-DD hoặc YYYY-MM-DDTHH:MM:SS) sang định dạng dd/mm/yyyy
+    """
+    # Bỏ timezone "Z" hoặc offset nếu có
+    date_str = date_str.replace("Z", "")
+    if "+" in date_str:
+        date_str = date_str.split("+")[0]
+    
+    # Parse chuỗi ISO
+    try:
+        dt = datetime.datetime.fromisoformat(date_str)
+        return dt.strftime("%d/%m/%Y")
+    except ValueError:
+        # Trường hợp chỉ có dạng YYYY-MM-DD
+        d = datetime.date.fromisoformat(date_str)
+        return d.strftime("%d/%m/%Y")
+
 def today():
     date = datetime.datetime.now()
     date = date.__str__().split()[0]
@@ -243,10 +284,12 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
 
         # Resolve Null start_time
         if not start_time:
-            start_time = datetime.datetime.now()
+            start_time = today()
 
-        if not end_time:
-            end_time = start_time + timedelta(days=1)
+        if end_time == None:
+            end_time = start_time + datetime.timedelta(days=1)
+
+        print(Fore.RED + f"--- Lịch: {start_time.isoformat()} ---> {end_time.isoformat()} ---" + Fore.RESET)
 
         # Resolve Null Calist:
         if not CalList:
@@ -280,8 +323,19 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
                         print(Fore.MAGENTA +"No upcoming events found." + Fore.RESET)
                         continue
                     
-                    for event in events:
+                    # check if allow the last day event (identified by the time range, 00:00:00 is not allowed)
+                    # limit = None if allowed
+                    # limit = end_time date if not allowed
+                    if end_time.hour == 0 and end_time.minute == 0 and end_time.second == 0:
+                        limit = end_time.__str__().split()[0]
+                    else:
+                        limit = None
 
+                    for event in events:
+                        start = event['start'].get('dateTime', event['start'].get('date'))
+                        print (Fore.RED + f"{start} ||||| {end_time} " + Fore.RESET)
+                        if start == limit: 
+                            continue
                         e_dict = MakeEventDict(event,cal_name)
                         events_list.append(e_dict)  
         
@@ -296,7 +350,13 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
             # result = result + check_prev_date(event['start']) + f"\t[{event['start_str']} ---> {event['end_str']}]: {event['summary']} \t({event['cal_name']})\n"
 
         if result == "":
-            result = f"Không có sự kiện nào từ ngày {start_time} đến ngày {end_time}"
+            if start_time == end_time - datetime.timedelta(days=1):
+                if region == 'vi':
+                    result = f"Không có sự kiện nào trong ngày {iso_to_vn_date(start_time.__str__().split()[0])}"
+                else:
+                    result = f"Không có sự kiện nào trong ngày {start_time.__str__().split()[0]}"
+            else:
+                result = f"Không có sự kiện nào từ ngày {start_time.__str__().split()[0]} đến ngày {end_time.__str__().split()[0]}"
 
         print("\n" + Fore.YELLOW + f"result: \n{result}" + Fore.RESET)
         return result
@@ -307,11 +367,11 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
 if __name__ == "__main__":
     SchedulerStart()
 
-    # start = datetime.datetime.fromisoformat('2025-08-31')
-    start = today()
+    start = datetime.datetime.fromisoformat('2025-08-31')
+    # start = today()
     # end = start + timedelta(days=2)
-    # output = GetEvents(start_time = start, end_time = end)
-    output = GetEvents(start_time = start)
+    output = GetEvents(start_time=start)
+    # output = GetEvents()
 
     print("\n================================================")
     print("OUTPUT:")
