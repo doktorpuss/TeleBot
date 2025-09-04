@@ -17,6 +17,17 @@ service = None
 region = 'vi'
 # region = 'gb'  # Global format
 
+previous_date_dict = None
+
+VietnamPeriod = {
+    "Morning":"Sáng",
+    "Afternoon":"Trưa",
+    "Evening":"Chiều",
+    "Night":"Tối",
+    "Mid night":"Đêm",
+    "Full day":"Cả ngày"
+}
+
 VietnamWeekDay = {
     "Mon":"Thứ hai",
     "Tue":"Thứ ba",
@@ -67,16 +78,37 @@ GlobalMonth = {
     "Dec":"December"
 }
 
+def today():
+    date = datetime.datetime.now()
+    date = date.__str__().split()[0]
+    return datetime.datetime.fromisoformat(date)    
+
 def DateTime_to_TimeDict(dt:datetime): 
     date,time = dt.__str__().split()
     date = date.split('-')
-    time,timezone = time.split('+')
+
+    timezone = "00:00"
+
+    if '+' in time:
+        time,timezone = time.split('+')
     time = time.split(':')
-    
+
+    #period
+    time_int = int(time[0])
+    if (time_int >= 3) and (time_int < 11): period = "Morning"
+    elif (time_int >= 11) and (time_int < 14): period = "Afternoon"
+    elif (time_int >= 14) and (time_int < 19): period = "Evening"
+    elif (time_int >= 19) and (time_int < 24): period = "Night"
+    elif (time_int > 0) and (time_int < 3): period = "Mid night"
+    else : period = "Full day"
+
     if region == 'vi':
         weekday = VietnamWeekDay[dt.ctime().split()[0]]
+        period = VietnamPeriod[period]
     else :
         weekday = GlobalWeekDay[dt.ctime().split()[0]]
+
+    date_value = (int(date[2]) + int(date[1]) * 31 + int(date[0]) * 31 * 12)*10000 + int(time[0])*60 + int(time[1])
 
     dt_dict = {
         "weekday": weekday,
@@ -86,7 +118,34 @@ def DateTime_to_TimeDict(dt:datetime):
         "hour": time[0],
         "minute": time[1],
         "second": time[2],
-        "timezone": timezone
+        "period": period,
+        "timezone": timezone,
+        "date_value": date_value
+    }
+
+    return dt_dict
+
+def MakeEventDict(event,cal_name):
+    start = event['start'].get('dateTime', event['start'].get('date'))
+    start = datetime.datetime.fromisoformat(start)
+    start = DateTime_to_TimeDict(start)
+    start_str = f"{start['hour']}:{start['minute']}"
+
+    end = event['end'].get('dateTime', event['end'].get('date'))
+    end = datetime.datetime.fromisoformat(end)
+    end = DateTime_to_TimeDict(end)
+    end_str = f"{end['hour']}:{end['minute']}"
+
+    summary = event.get('summary','No Title')
+    print(f"\t[{start_str} ---> {end_str}]: {event.get('summary', 'No Title')}\n")
+
+    return {
+        "start": start,
+        "start_str": start_str,
+        "end": end,
+        "end_str": end_str,
+        "summary": summary,
+        "cal_name": cal_name
     }
 
 
@@ -117,6 +176,7 @@ def SchedulerStart():
         service = build("calendar","v3",credentials=creds)
 
         # now = datetime.datetime.now().isoformat() + "Z"
+        # end = (datetime.datetime.now() + datetime.timedelta(days=1)).isoformat() + "Z"
 
         # # Get calendar list 
         # calendar_list = service.calendarList().list().execute()
@@ -146,13 +206,34 @@ def SchedulerStart():
         #     for event in events:
         #         start = event['start'].get('dateTime', event['start'].get('date'))
         #         end = event['end'].get('dateTime', event['end'].get('date'))
-        #         print(f"[{start} ---> {end} ]: {event.get("summary", "No Title")}")
+        #         print(f"[{start} ---> {end} ]: {event.get('summary', 'No Title')}")
 
     except HttpError as error:
         print(f"An error occurred: {error}")
 
+def check_prev_date(date_dict):
+    global previous_date_dict
+
+    flag = False
+
+    if previous_date_dict == None:
+        previous_date_dict = date_dict
+        flag = True
+    elif (previous_date_dict['day'] != date_dict['day']) or (previous_date_dict['month'] != date_dict['month']) or (previous_date_dict['year'] != date_dict['year']):
+        previous_date_dict = date_dict
+        flag = True
+    
+    ret_str = ""
+
+    if flag:
+        ret_str = f"\n[ {date_dict['weekday']}, Ngày {date_dict['day']}/{date_dict['month']}/{date_dict['year']} ]:\n"
+
+    return ret_str
+    
+
+
 def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
-    global service
+    global service,previous_date_dict
 
     try:
         result: str = ""
@@ -165,7 +246,7 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
             start_time = datetime.datetime.now()
 
         if not end_time:
-            end_time = start_time + timedelta(days=30)
+            end_time = start_time + timedelta(days=1)
 
         # Resolve Null Calist:
         if not CalList:
@@ -176,6 +257,7 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
         print(Style.BRIGHT)
 
         # Get requested
+        events_list = []
         for calendar_demanded in CalList:
             for calendar_entry in calendar_list['items']:
                 if (calendar_demanded == calendar_entry['summary']):
@@ -198,20 +280,20 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
                         print(Fore.MAGENTA +"No upcoming events found." + Fore.RESET)
                         continue
                     
-                    result = result + f"{cal_name}:\n"
                     for event in events:
 
-                        start = event['start'].get('dateTime', event['start'].get('date'))
-                        start = datetime.datetime.fromisoformat(start)
-                        # start_date,start_time =  
+                        e_dict = MakeEventDict(event,cal_name)
+                        events_list.append(e_dict)  
+        
+        #sort event
+        events_list.sort(key = lambda x: x["start"]["date_value"])
 
-                        end = event['end'].get('dateTime', event['end'].get('date'))
-                        end = datetime.datetime.fromisoformat(end)
-
-                        print(f"[{start} ---> {end} ]: {event.get("summary", "No Title")}")
-                        result = result + f"[{start} ---> {end} ]: {event.get("summary", "No Title")}\n"
-                    
-                    result = result + '\n'
+        # print events
+        previous_date_dict = None
+        for event in events_list:
+            # result = result + check_prev_date(event['start']) + f"\t{event['start_str']} -> {event['end_str']}: {event['summary']} \n"
+            result = result + check_prev_date(event['start']) + f"\t[{event['start_str']} ---> {event['end_str']}]: {event['summary']} \t({event['start']['period']})\n"
+            # result = result + check_prev_date(event['start']) + f"\t[{event['start_str']} ---> {event['end_str']}]: {event['summary']} \t({event['cal_name']})\n"
 
         if result == "":
             result = f"Không có sự kiện nào từ ngày {start_time} đến ngày {end_time}"
@@ -225,8 +307,10 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
 if __name__ == "__main__":
     SchedulerStart()
 
-    # start = datetime.datetime.fromisoformat('2026-03-01')
-    start = datetime.datetime.now()
+    # start = datetime.datetime.fromisoformat('2025-08-31')
+    start = today()
+    # end = start + timedelta(days=2)
+    # output = GetEvents(start_time = start, end_time = end)
     output = GetEvents(start_time = start)
 
     print("\n================================================")
