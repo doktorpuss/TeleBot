@@ -78,6 +78,9 @@ GlobalMonth = {
     "Dec":"December"
 }
 
+def vn_to_iso_date(date_str: str) -> str:
+    return normalize_date_string(date_str)
+
 def normalize_date_string(date_str: str) -> str:
     """
     Chuẩn hóa chuỗi ngày về dạng ISO `YYYY-MM-DD`
@@ -189,7 +192,6 @@ def MakeEventDict(event,cal_name):
         "cal_name": cal_name
     }
 
-
 def SchedulerStart():
     global creds,service
 
@@ -271,8 +273,6 @@ def check_prev_date(date_dict):
 
     return ret_str
     
-
-
 def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
     global service,previous_date_dict
 
@@ -364,18 +364,69 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
     except HttpError as error:
         print(f"An error occurred: {error}")
 
+def CreateEvent(service, summary: str, time_str: str, calendar_id: str = "primary"):
+    """
+    Thêm sự kiện vào Google Calendar.
+    
+    Args:
+        service: Google Calendar API service
+        summary (str): Tên sự kiện
+        time_str (str): Chuỗi thời gian
+                        - 'YYYY-MM-DD' => sự kiện cả ngày
+                        - 'YYYY-MM-DD HH:MM to YYYY-MM-DD HH:MM' => sự kiện có giờ
+        calendar_id (str): ID của lịch (mặc định: 'primary')
+    """
+    try:
+        if "to" in time_str:
+            # Trường hợp có giờ bắt đầu - kết thúc
+            start_str, end_str = [s.strip() for s in time_str.split("to")]
+            start_time = datetime.datetime.fromisoformat(start_str)
+            end_time = datetime.datetime.fromisoformat(end_str)
+
+            event = {
+                "summary": summary,
+                "start": {
+                    "dateTime": start_time.isoformat(),
+                    "timeZone": "Asia/Ho_Chi_Minh",
+                },
+                "end": {
+                    "dateTime": end_time.isoformat(),
+                    "timeZone": "Asia/Ho_Chi_Minh",
+                },
+            }
+        else:
+            # Trường hợp sự kiện cả ngày
+            date_str = time_str.strip()
+            datetime.datetime.fromisoformat(date_str)  # kiểm tra hợp lệ
+
+            event = {
+                "summary": summary,
+                "start": {"date": date_str},
+                "end": {"date": date_str},
+            }
+
+        created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
+        print(f"✅ Đã tạo sự kiện: {created_event.get('htmlLink')}")
+        return created_event
+
+    except Exception as e:
+        print(f"❌ Lỗi khi tạo sự kiện: {e}")
+        return None
+    
 if __name__ == "__main__":
     SchedulerStart()
 
-    start = datetime.datetime.fromisoformat('2025-08-31')
+    # start = datetime.datetime.fromisoformat('2025-08-31')
     # start = today()
     # end = start + timedelta(days=2)
-    output = GetEvents(start_time=start)
+    # output = GetEvents(start_time=start)
     # output = GetEvents()
+
+    CreateEvent(service, "Test event", "2025-09-12")
 
     print("\n================================================")
     print("OUTPUT:")
-    print(output)
+    # print(output)
 
 
 
