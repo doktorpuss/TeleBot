@@ -278,6 +278,7 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
 
     try:
         result: str = ""
+        singleDay = False
         
         # Get calendar list 
         calendar_list = service.calendarList().list().execute()
@@ -287,7 +288,13 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
             start_time = today()
 
         if end_time == None:
+            singleDay = True
             end_time = start_time + datetime.timedelta(days=1)
+
+        if singleDay:
+            timeMin = start_time - datetime.timedelta(hours=7)
+        else :
+            timeMin = start_time
 
         print(Fore.RED + f"--- Lịch: {start_time.isoformat()} ---> {end_time.isoformat()} ---" + Fore.RESET)
 
@@ -310,7 +317,7 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
 
                     events_result = service.events().list(
                         calendarId=cal_id,
-                        timeMin=start_time.isoformat() + "Z",
+                        timeMin=timeMin.isoformat() + "Z",
                         timeMax=end_time.isoformat() + "Z",
                         maxResults=num,
                         singleEvents=True,
@@ -330,6 +337,24 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
                         limit = end_time.__str__().split()[0]
                     else:
                         limit = None
+
+                    # Lọc sự kiện đúng ngày
+                    if singleDay:
+                        target_day = start_time.date()
+
+                        filtered_events = []
+                        for event in events:
+                            start = event["start"].get("dateTime", event["start"].get("date"))
+                            if "T" in start:  # dạng dateTime
+                                start_dt = datetime.datetime.fromisoformat(start.replace("Z", "+00:00")).astimezone()
+                                if start_dt.date() == target_day:
+                                    filtered_events.append(event)
+                            else:  # dạng date (all-day event)
+                                start_date = datetime.date.fromisoformat(start)
+                                if start_date == target_day:
+                                    filtered_events.append(event)
+
+                        events = filtered_events
 
                     for event in events:
                         start = event['start'].get('dateTime', event['start'].get('date'))
@@ -420,9 +445,9 @@ if __name__ == "__main__":
     # start = today()
     # end = start + timedelta(days=2)
     # output = GetEvents(start_time=start)
-    # output = GetEvents()
+    output = GetEvents()
 
-    CreateEvent(service, "Test event", "2025-09-12")
+    # CreateEvent(service, "Test event", "2025-09-12")
 
     print("\n================================================")
     print("OUTPUT:")

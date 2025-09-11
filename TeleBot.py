@@ -6,6 +6,8 @@ from telegram.ext import Application,CommandHandler,MessageHandler,filters,Conte
 
 import PersonalScheduler as scheduler
 
+ndayinmonth = [31,28,31,30,31,30,31,31,30,31,30,31]
+
 serving = False
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -81,7 +83,7 @@ async def CMD_today_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def CMD_week_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    week_start = datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())
+    week_start = datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday()+1)
     week_end = week_start + datetime.timedelta(days=7)
 
     response = scheduler.GetEvents(start_time=week_start, end_time=week_end)
@@ -90,7 +92,7 @@ async def CMD_week_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def CMD_month_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     month_start = datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().day)
-    month_end = month_start + datetime.timedelta(days=30)
+    month_end = month_start + datetime.timedelta(days=ndayinmonth[datetime.datetime.now().month-1])
 
     response = scheduler.GetEvents(start_time=month_start, end_time=month_end)
     await update.message.reply_text(response)
