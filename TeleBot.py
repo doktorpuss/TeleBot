@@ -20,19 +20,11 @@ async def end_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # end tasks programable
     await update.message.reply_text("Copied. Call me whenever you want.")
 
-async def get_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Ưu tiên lấy message từ update.message, nếu không có thì lấy từ update.edited_message
-    message = update.message or update.edited_message
-    if not message or not message.text:
-        return  # bỏ qua update không có text
-    
-    text = message.text.replace("/event", "").strip()
-    print(f"got text: {text}\n")
+def get_event_process(text):
 
     if text == "":
         response = scheduler.GetEvents()
-        await update.message.reply_text(response)
-        return
+        return response
         
     # Arguments handler
     if ("today" in text):
@@ -62,8 +54,8 @@ async def get_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(Fore.RED + text[0] + Fore.RESET)
         start = datetime.datetime.fromisoformat(text[0])
         response = scheduler.GetEvents(start_time = start)
-        await update.message.reply_text(response)
-        return
+        return response
+        
     elif (len(text)==3):
         text[0] = scheduler.normalize_date_string(text[0])
         text[2] = scheduler.normalize_date_string(text[2])
@@ -71,10 +63,22 @@ async def get_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         start = datetime.datetime.fromisoformat(text[0])
         end = datetime.datetime.fromisoformat(text[2])
         response = scheduler.GetEvents(start_time = start, end_time = end)
-        await update.message.reply_text(response)
-        return
+        return response
+    
+    return "Unknown format. \nTry again with: \"<date> to/đến <date>\" \nor \"<date>\""
 
-    await update.message.reply_text("Unknown format. \nTry again with: \"<date> to/đến <date>\" \nor \"<date>\"")
+async def get_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Ưu tiên lấy message từ update.message, nếu không có thì lấy từ update.edited_message
+    message = update.message or update.edited_message
+    if not message or not message.text:
+        return  # bỏ qua update không có text
+    
+    text = message.text.replace("/event", "").strip()
+    print(f"got text: {text}\n")
+
+    response = get_event_process(text)
+
+    await update.message.reply_text(response)
     return
 
 async def CMD_today_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -119,6 +123,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"Update {update} cause error {context.error}")
+    await update.message.reply_text(f"{context.error}")
 
 if __name__ == '__main__':
     print("Starting IRI")

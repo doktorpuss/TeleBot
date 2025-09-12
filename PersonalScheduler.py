@@ -445,9 +445,9 @@ if __name__ == "__main__":
     # start = today()
     # end = start + timedelta(days=2)
     # output = GetEvents(start_time=start)
-    output = GetEvents()
+    # output = GetEvents()
 
-    # CreateEvent(service, "Test event", "2025-09-12")
+    CreateEvent(service, "Test event", "2025-09-12 11:00 to 2025-09-12 13:00")
 
     print("\n================================================")
     print("OUTPUT:")
