@@ -37,6 +37,29 @@ def replace_date_ref_by_exact_date(text):
 
     return text
 
+def reaplace_daypart_by_exact_time(text):
+    if ("Morning" in  text):
+        text = text.replace("Morning","08:00 11:00")
+    elif ("Sáng"in  text):
+        text = text.replace("Sáng","08:00 11:00")
+    
+    if ("Afternoon" in  text):
+        text = text.replace("Afternoon","12:00 13:00")
+    elif ("Trưa"in  text):
+        text = text.replace("Trưa","12:00 13:00")
+
+    if ("Evening" in  text):
+        text = text.replace("Evening","14:00 18:00")
+    elif ("Chiều"in  text):
+        text = text.replace("Chiều","14:00 18:00")
+
+    if ("Night" in  text):
+        text = text.replace("Night","20:00 23:00")
+    elif ("Tối"in  text):
+        text = text.replace("Tối","20:00 23:00")
+
+    return text
+
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
