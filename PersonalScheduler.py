@@ -81,6 +81,20 @@ GlobalMonth = {
 def vn_to_iso_date(date_str: str) -> str:
     return normalize_date_string(date_str)
 
+def normalize_time_string(time_str: str) -> str:
+    """
+    Chuẩn hóa chuỗi về hh:mm
+    """
+    if ":" in time_str:
+        try:
+            hour, minute = time_str.split(":")
+            return f"{hour.zfill(2)}:{minute.zfill(2)}"
+        except Exception:
+            raise ValueError(f"Không nhận diện được định dạng thời gian: {time_str}")
+
+    raise ValueError(f"Không nhận diện được định dạng thời gian: {time_str}")
+
+
 def normalize_date_string(date_str: str) -> str:
     """
     Chuẩn hóa chuỗi ngày về dạng ISO `YYYY-MM-DD`
@@ -389,6 +403,9 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
     except HttpError as error:
         print(f"An error occurred: {error}")
 
+def create_event(summary: str, time_str: str, calendar_id: str = "primary"):
+    return CreateEvent(service, summary, time_str, calendar_id)
+
 def CreateEvent(service, summary: str, time_str: str, calendar_id: str = "primary"):
     """
     Thêm sự kiện vào Google Calendar.
@@ -434,8 +451,10 @@ def CreateEvent(service, summary: str, time_str: str, calendar_id: str = "primar
         print(f"✅ Đã tạo sự kiện: {created_event.get('htmlLink')}")
         return created_event
 
-    except Exception as e:
+    except ValueError as e:
         print(f"❌ Lỗi khi tạo sự kiện: {e}")
+        raise ValueError(f"❌ Lỗi khi tạo sự kiện: {e}")
+        
         return None
     
 if __name__ == "__main__":
@@ -447,7 +466,7 @@ if __name__ == "__main__":
     # output = GetEvents(start_time=start)
     # output = GetEvents()
 
-    CreateEvent(service, "Test event", "2025-09-12 11:00 to 2025-09-12 13:00")
+    CreateEvent(service, "Test event", "2025-09-11 07:00 to 2025-09-13")
 
     print("\n================================================")
     print("OUTPUT:")

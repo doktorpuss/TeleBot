@@ -1,0 +1,1 @@
+* recognize scheduler request in normal messages (let user request without sending commands like '/today','/event',...)
