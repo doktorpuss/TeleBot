@@ -39,24 +39,24 @@ def replace_date_ref_by_exact_date(text):
 
 def reaplace_daypart_by_exact_time(text):
     if ("Morning" in  text):
-        text = text.replace("Morning","08:00 11:00")
+        text = text.replace("Morning","08:00|11:00")
     elif ("Sáng"in  text):
-        text = text.replace("Sáng","08:00 11:00")
+        text = text.replace("Sáng","08:00|11:00")
     
     if ("Afternoon" in  text):
-        text = text.replace("Afternoon","12:00 13:00")
+        text = text.replace("Afternoon","12:00|13:00")
     elif ("Trưa"in  text):
-        text = text.replace("Trưa","12:00 13:00")
+        text = text.replace("Trưa","12:00|13:00")
 
     if ("Evening" in  text):
-        text = text.replace("Evening","14:00 18:00")
+        text = text.replace("Evening","14:00|18:00")
     elif ("Chiều"in  text):
-        text = text.replace("Chiều","14:00 18:00")
+        text = text.replace("Chiều","14:00|18:00")
 
     if ("Night" in  text):
-        text = text.replace("Night","20:00 23:00")
+        text = text.replace("Night","20:00|23:00")
     elif ("Tối"in  text):
-        text = text.replace("Tối","20:00 23:00")
+        text = text.replace("Tối","20:00|23:00")
 
     return text
 
@@ -203,6 +203,20 @@ async def ask_event_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ask_event_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     text = replace_date_ref_by_exact_date(text)
+
+    # #if daypart included
+    # temp = reaplace_daypart_by_exact_time(text)
+    # if (temp != text):
+    #     text = temp.split()
+    #     if (len(text)==1):
+    #         start_date = scheduler.today().__str__().split()[0]
+    #         end_date = create_event_info.start_date
+    #         start_time = text[0].split('|')[0]
+    #         end_time = text[0].split('|')[1]
+    #     elif (len(text)==2)
+
+
+    # if not daypart included
     text = text.split()
     
     print(len(text))
