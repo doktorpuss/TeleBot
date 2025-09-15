@@ -13,7 +13,6 @@ serving = False
 #utilities
 
 def replace_date_ref_by_exact_date(text):
-    text = text.lower()
     # Arguments handler
     if ("today" in text):
         today = datetime.datetime.now().__str__().split()[0]
@@ -21,17 +20,11 @@ def replace_date_ref_by_exact_date(text):
     elif ("hôm nay" in text):
         today = datetime.datetime.now().__str__().split()[0]
         text = text.replace("hôm nay",today)
-    elif ("nay" in text):
-        today = datetime.datetime.now().__str__().split()[0]
-        text = text.replace("hôm nay",today)
     
     if ("tomorrow" in text):
         tormorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).__str__().split()[0]
         text = text.replace("tomorrow",tormorrow)
     elif ("ngày mai" in text):
-        tormorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).__str__().split()[0]
-        text = text.replace("ngày mai",tormorrow)
-    elif ("mai" in text):
         tormorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).__str__().split()[0]
         text = text.replace("ngày mai",tormorrow)
 
@@ -45,25 +38,25 @@ def replace_date_ref_by_exact_date(text):
     return text
 
 def reaplace_daypart_by_exact_time(text):
-    if ("morning" in  text):
-        text = text.replace("morning","08:00|11:00")
-    elif ("sáng"in  text):
-        text = text.replace("sáng","08:00|11:00")
+    if ("Morning" in  text):
+        text = text.replace("Morning","08:00|11:00")
+    elif ("Sáng"in  text):
+        text = text.replace("Sáng","08:00|11:00")
     
-    if ("afternoon" in  text):
-        text = text.replace("afternoon","12:00|13:00")
-    elif ("trưa"in  text):
-        text = text.replace("trưa","12:00|13:00")
+    if ("Afternoon" in  text):
+        text = text.replace("Afternoon","12:00|13:00")
+    elif ("Trưa"in  text):
+        text = text.replace("Trưa","12:00|13:00")
 
-    if ("evening" in  text):
-        text = text.replace("evening","14:00|18:00")
-    elif ("chiều"in  text):
-        text = text.replace("chiều","14:00|18:00")
+    if ("Evening" in  text):
+        text = text.replace("Evening","14:00|18:00")
+    elif ("Chiều"in  text):
+        text = text.replace("Chiều","14:00|18:00")
 
-    if ("night" in  text):
-        text = text.replace("night","20:00|23:00")
-    elif ("tối"in  text):
-        text = text.replace("tối","20:00|23:00")
+    if ("Night" in  text):
+        text = text.replace("Night","20:00|23:00")
+    elif ("Tối"in  text):
+        text = text.replace("Tối","20:00|23:00")
 
     return text
 
@@ -212,34 +205,15 @@ async def ask_event_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = replace_date_ref_by_exact_date(text)
 
     # #if daypart included
-    temp = reaplace_daypart_by_exact_time(text)
-    if (temp != text):
-        text = temp.split()
-        if (len(text)==1):
-            create_event_info.start_date = scheduler.today().__str__().split()[0]
-            create_event_info.end_date = create_event_info.start_date
-            create_event_info.start_time = text[0].split('|')[0]
-            create_event_info.end_time = text[0].split('|')[1]
-            await update.message.reply_text("Hãy cho tôi biết tên của sự kiện:")
-            return ASK_SUMARY
-        elif (len(text)==2):
-            if (('/' in text[0]) or ('-' in text[0])) and (':' in text[1]):
-                create_event_info.start_date = text[0]
-                create_event_info.start_time = text[1].split('|')[0]
-                create_event_info.end_date = text[0]
-                create_event_info.end_time = text[1].split('|')[1]
-                await update.message.reply_text("Hãy cho tôi biết tên của sự kiện:")
-                return ASK_SUMARY
-            elif (':' in text[0]) and (('/' in text[1]) or ('-' in text[1])):
-                create_event_info.start_date = text[1]
-                create_event_info.start_time = text[0].split('|')[0]
-                create_event_info.end_date = text[1]
-                create_event_info.end_time = text[0].split('|')[1]
-                await update.message.reply_text("Hãy cho tôi biết tên của sự kiện:")
-                return ASK_SUMARY
-        
-        await update.message.reply_text("Không đúng định dạng thời gian. \nXin hãy nhập lại hoặc /cancel để bỏ qua")
-        return ASK_START_TIME
+    # temp = reaplace_daypart_by_exact_time(text)
+    # if (temp != text):
+    #     text = temp.split()
+    #     if (len(text)==1):
+    #         start_date = scheduler.today().__str__().split()[0]
+    #         end_date = create_event_info.start_date
+    #         start_time = text[0].split('|')[0]
+    #         end_time = text[0].split('|')[1]
+    #     elif (len(text)==2)
 
 
     # if not daypart included
@@ -367,6 +341,18 @@ async def ask_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("CANCELED")
     return ConversationHandler.END
+
+# async def create_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     #action log
+#     print(f"User: {update.message.from_user}, Type: Create Event, Content: {update.message.text}")
+
+#     # Ưu tiên lấy message từ update.message, nếu không có thì lấy từ update.edited_message
+#     message = update.message or update.edited_message
+#     if not message or not message.text:
+#         return  # bỏ qua update không có text
+    
+#     text = message.text.replace("/CreateEvent", "").strip()
+#     print(f"got text: {text}\n")
 
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler('create_event', ask_event_info)],
