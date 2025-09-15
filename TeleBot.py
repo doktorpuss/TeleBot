@@ -14,12 +14,16 @@ serving = False
 
 def replace_date_ref_by_exact_date(text):
     # Arguments handler
+    text = text.lower()
     if ("today" in text):
         today = datetime.datetime.now().__str__().split()[0]
         text = text.replace("today",today)
     elif ("hôm nay" in text):
         today = datetime.datetime.now().__str__().split()[0]
         text = text.replace("hôm nay",today)
+    elif ("nay" in text):
+        today = datetime.datetime.now().__str__().split()[0]
+        text = text.replace("nay",today)
     
     if ("tomorrow" in text):
         tormorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).__str__().split()[0]
@@ -27,6 +31,9 @@ def replace_date_ref_by_exact_date(text):
     elif ("ngày mai" in text):
         tormorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).__str__().split()[0]
         text = text.replace("ngày mai",tormorrow)
+    elif ("mai" in text):
+        tormorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).__str__().split()[0]
+        text = text.replace("mai",tormorrow)
 
     if ("the day before" in text):
         day_before = (datetime.datetime.now() - datetime.timedelta(days=1)).__str__().split()[0]
@@ -38,25 +45,25 @@ def replace_date_ref_by_exact_date(text):
     return text
 
 def reaplace_daypart_by_exact_time(text):
-    if ("Morning" in  text):
-        text = text.replace("Morning","08:00|11:00")
-    elif ("Sáng"in  text):
-        text = text.replace("Sáng","08:00|11:00")
+    if ("morning" in  text):
+        text = text.replace("morning","08:00|11:00")
+    elif ("sáng"in  text):
+        text = text.replace("sáng","08:00|11:00")
     
-    if ("Afternoon" in  text):
-        text = text.replace("Afternoon","12:00|13:00")
-    elif ("Trưa"in  text):
-        text = text.replace("Trưa","12:00|13:00")
+    if ("afternoon" in  text):
+        text = text.replace("afternoon","12:00|13:00")
+    elif ("trưa"in  text):
+        text = text.replace("trưa","12:00|13:00")
 
-    if ("Evening" in  text):
-        text = text.replace("Evening","14:00|18:00")
-    elif ("Chiều"in  text):
-        text = text.replace("Chiều","14:00|18:00")
+    if ("evening" in  text):
+        text = text.replace("evening","14:00|18:00")
+    elif ("chiều"in  text):
+        text = text.replace("chiều","14:00|18:00")
 
-    if ("Night" in  text):
-        text = text.replace("Night","20:00|23:00")
-    elif ("Tối"in  text):
-        text = text.replace("Tối","20:00|23:00")
+    if ("night" in  text):
+        text = text.replace("night","20:00|23:00")
+    elif ("tối" in  text):
+        text = text.replace("tối","20:00|23:00")
 
     return text
 
@@ -165,7 +172,8 @@ async def CMD_month_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ASK_START_TIME = "ASK_START_TIME"
 ASK_END_TIME = "ASK_END_TIME"
 ASK_SUMARY = "ASK_SUMARY"
-ASK_OPTIONS = "ASK_CONFIRM"
+ASK_OPTIONS = "ASK_OPTIONS"
+ASK_CONFIRM = "ASK_CONFIRM"
 CREATE_EVENT = "CREATE_EVENT"
 
 # create_event_info packages in below format:
@@ -205,16 +213,34 @@ async def ask_event_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = replace_date_ref_by_exact_date(text)
 
     # #if daypart included
-    # temp = reaplace_daypart_by_exact_time(text)
-    # if (temp != text):
-    #     text = temp.split()
-    #     if (len(text)==1):
-    #         start_date = scheduler.today().__str__().split()[0]
-    #         end_date = create_event_info.start_date
-    #         start_time = text[0].split('|')[0]
-    #         end_time = text[0].split('|')[1]
-    #     elif (len(text)==2)
-
+    temp = reaplace_daypart_by_exact_time(text)
+    if (temp != text):
+        text = temp.split()
+        if (len(text)==1):
+            create_event_info.start_date = scheduler.today().__str__().split()[0]
+            create_event_info.end_date = create_event_info.start_date
+            create_event_info.start_time = text[0].split('|')[0]
+            create_event_info.end_time = text[0].split('|')[1]
+            await update.message.reply_text("Hãy cho tôi biết tên của sự kiện:")
+            return ASK_SUMARY
+        elif (len(text)==2):
+            if (('/' in text[0]) or ('-' in text[0])) and (':' in text[1]):
+                create_event_info.start_date = text[0]
+                create_event_info.start_time = text[1].split('|')[0]
+                create_event_info.end_date = text[0]
+                create_event_info.end_time = text[1].split('|')[1]
+                await update.message.reply_text("Hãy cho tôi biết tên của sự kiện:")
+                return ASK_SUMARY
+            elif (':' in text[0]) and (('/' in text[1]) or ('-' in text[1])):
+                create_event_info.start_date = text[1]
+                create_event_info.start_time = text[0].split('|')[0]
+                create_event_info.end_date = text[1]
+                create_event_info.end_time = text[0].split('|')[1]
+                await update.message.reply_text("Hãy cho tôi biết tên của sự kiện:")
+                return ASK_SUMARY
+        
+        await update.message.reply_text("Không đúng định dạng thời gian. \nXin hãy nhập lại hoặc /cancel để bỏ qua")
+        return ASK_START_TIME
 
     # if not daypart included
     text = text.split()
@@ -302,7 +328,7 @@ async def ask_summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     create_event_info.end_date = scheduler.normalize_date_string(create_event_info.end_date)
 
     await update.message.reply_text(f"Xác nhận lịch sự kiện mới: \n{create_event_info.start_date} {create_event_info.start_time} to {create_event_info.end_date} {create_event_info.end_time} {create_event_info.summary}, {create_event_info.options}")
-    await update.message.reply_text("Bạn có thể xác nhận, từ bỏ, hoặc cung cấp thêm thông tin \n\"oke\": Xác nhận \n\\cancel: Bỏ tạo sự kiện\n ")
+    await update.message.reply_text("Bạn có thể xác nhận, từ bỏ, hoặc cung cấp thêm thông tin \n/oke: Xác nhận \n/cancel: Bỏ tạo sự kiện\n ")
     await update.message.reply_text("Các thông tin bổ sung có thể dung cấp:\n CalID: <tên lịch>")
     return ASK_OPTIONS
 
@@ -319,21 +345,9 @@ async def ask_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     if valid_opt:
         await update.message.reply_text(f"Xác nhận lịch sự kiện mới: \n{create_event_info.start_date} {create_event_info.start_time} to {create_event_info.end_date} {create_event_info.end_time} {create_event_info.summary}, {create_event_info.options}")
-        await update.message.reply_text("Bạn có thể xác nhận, từ bỏ, hoặc cung cấp thêm thông tin \n\"oke\": Xác nhận \n\\cancel: Bỏ tạo sự kiện\n ")
+        await update.message.reply_text("Bạn có thể xác nhận, từ bỏ, hoặc cung cấp thêm thông tin \n/oke: Xác nhận \n/cancel: Bỏ tạo sự kiện\n ")
         await update.message.reply_text("Các thông tin bổ sung có thể dung cấp:\n CalID: <tên lịch>")
         return ASK_OPTIONS
-
-
-    if text == "oke":
-        time_range = f"{create_event_info.start_date} {create_event_info.start_time} to {create_event_info.end_date} {create_event_info.end_time}"
-        sumary = create_event_info.summary
-        CalID = create_event_info.CalID
-
-    # create event
-    created_event = scheduler.create_event(sumary, time_range, CalID)
-    if created_event:
-        await update.message.reply_text("✅ Tạo sự kiện thành công")
-        return ConversationHandler.END
     
     await update.message.reply_text("Hãy nhập thông tin đúng định dạng hoặc /cancel")
     return ASK_OPTIONS
@@ -342,17 +356,16 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("CANCELED")
     return ConversationHandler.END
 
-# async def create_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     #action log
-#     print(f"User: {update.message.from_user}, Type: Create Event, Content: {update.message.text}")
+async def create_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    time_range = f"{create_event_info.start_date} {create_event_info.start_time} to {create_event_info.end_date} {create_event_info.end_time}"
+    sumary = create_event_info.summary
+    CalID = create_event_info.CalID
 
-#     # Ưu tiên lấy message từ update.message, nếu không có thì lấy từ update.edited_message
-#     message = update.message or update.edited_message
-#     if not message or not message.text:
-#         return  # bỏ qua update không có text
-    
-#     text = message.text.replace("/CreateEvent", "").strip()
-#     print(f"got text: {text}\n")
+    # create event
+    created_event = scheduler.create_event(sumary, time_range, CalID)
+    if created_event:
+        await update.message.reply_text("✅ Tạo sự kiện thành công")
+        return ConversationHandler.END
 
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler('create_event', ask_event_info)],
@@ -360,7 +373,7 @@ conv_handler = ConversationHandler(
         ASK_START_TIME: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_event_start)],
         ASK_END_TIME: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_event_end)],
         ASK_SUMARY: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_summary)],
-        ASK_OPTIONS: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_options)],
+        ASK_OPTIONS: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_options),CommandHandler('oke', create_event_handler),],
     },
     fallbacks=[CommandHandler('cancel', cancel_handler)],
 )
@@ -385,7 +398,7 @@ if __name__ == '__main__':
     app.add_handler(conv_handler)
 
     #MESSAGE
-    app.add_handler(MessageHandler(filters.TEXT, message_handler))
+    # app.add_handler(MessageHandler(filters.TEXT, message_handler))
 
     #ERROR
     app.add_error_handler(error)
