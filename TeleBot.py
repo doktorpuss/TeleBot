@@ -68,6 +68,20 @@ def reaplace_daypart_by_exact_time(text):
     return text
 
 
+def extract_date_time_from_text(text) :
+    text = text.split()
+    if (len(text)==1):
+        if ('/' in text[0]) or ('-' in text[0]):
+            return text[0],""
+        if (':' in text[0]):
+            return "",text[0]
+    elif (len(text)==2):
+        if (':' in text[0]) and (('/' in text[1]) or ('-' in text[1])):
+            return text[1],text[0]
+        elif (':' in text[1]) and (('/' in text[0]) or ('-' in text[0])):
+            return text[0],text[1]
+    return "",""
+
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # start tasks programable
@@ -100,48 +114,119 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # GET EVENT 
-def get_event_process(text):
 
-    if text == "":
-        response = scheduler.GetEvents()
-        return response
+# conversation states
+GET_EVENT_START = "GET_EVENT_START"
+ASK_TIME_RANGE = "ASK_TIME_RANGE"
+
+# def get_event_process(text):
+
+#     if text == "":
+#         response = scheduler.GetEvents()
+#         return response
+        
+#     text = replace_date_ref_by_exact_date(text)
+
+#     text = text.split()
+#     if (len(text)==1):
+#         text[0] = scheduler.normalize_date_string(text[0])
+#         print(Fore.RED + text[0] + Fore.RESET)
+#         start = datetime.datetime.fromisoformat(text[0])
+#         response = scheduler.GetEvents(start_time = start)
+#         return response
+        
+#     elif (len(text)==3):
+#         text[0] = scheduler.normalize_date_string(text[0])
+#         text[2] = scheduler.normalize_date_string(text[2])
+#         print(Fore.RED + text[0] + " to " + text[2] + Fore.RESET)
+#         start = datetime.datetime.fromisoformat(text[0])
+#         end = datetime.datetime.fromisoformat(text[2])
+#         response = scheduler.GetEvents(start_time = start, end_time = end)
+#         return response
+
+def get_event_process(text):
         
     text = replace_date_ref_by_exact_date(text)
+    text = reaplace_daypart_by_exact_time(text)
 
-    text = text.split()
-    if (len(text)==1):
-        text[0] = scheduler.normalize_date_string(text[0])
-        print(Fore.RED + text[0] + Fore.RESET)
-        start = datetime.datetime.fromisoformat(text[0])
-        response = scheduler.GetEvents(start_time = start)
-        return response
-        
-    elif (len(text)==3):
-        text[0] = scheduler.normalize_date_string(text[0])
-        text[2] = scheduler.normalize_date_string(text[2])
-        print(Fore.RED + text[0] + " to " + text[2] + Fore.RESET)
-        start = datetime.datetime.fromisoformat(text[0])
-        end = datetime.datetime.fromisoformat(text[2])
+    if "to" in text:
+        text = text.split(" to ")
+    elif "đến" in text:
+        text = text.split(" đến ")
+    elif ('/' in text) or ('-' in text) or (':' in text):
+        text = [text,""]
+    else:
+        return "Vui lòng nhập đúng định dạng: <thời gian bắt đầu> đến/to <thời gian kết thúc>\n <ngày muốn kiểm tra>"
+    
+    start_date,start_time = extract_date_time_from_text(text[0])
+    end_date,end_time = extract_date_time_from_text(text[1])
+
+    if start_date == "" : start_date = datetime.datetime.now().__str__().split()[0]
+    if '/' in start_date: start_date = scheduler.normalize_date_string(start_date)
+    if '/' in end_date: end_date = scheduler.normalize_date_string(end_date)
+
+    if ("|" in start_time):
+        if not ("|" in end_time): 
+            end_time = start_time.split("|")[1]   
+            start_time = start_time.split("|")[0]
+        elif ("|" in end_time): 
+            end_time = end_time.split("|")[1]
+            start_time = start_time.split("|")[0]
+
+
+    print (Fore.LIGHTYELLOW_EX + start_date + " " + start_time + " to " + end_date + " " + end_time + Fore.RESET)
+    # full info
+    if (end_date != "") and (end_time != "") and (start_time != ""):
+        start = datetime.datetime.fromisoformat(start_date + " " + start_time)
+        end = datetime.datetime.fromisoformat(end_date + " " + end_time)
         response = scheduler.GetEvents(start_time = start, end_time = end)
         return response
     
-    return "Unknown format. \nTry again with: \"<date> to/đến <date>\" \nor \"<date>\""
+    # date only
+    if (end_date == "") and (end_time == "") and (start_time == ""):
+        start = datetime.datetime.fromisoformat(start_date)
+        response = scheduler.GetEvents(start_time = start)
+        return response
+    
+    #inday timerange range
+    if (end_date == "") and (end_time != "") and (start_time != ""):
+        start = datetime.datetime.fromisoformat(start_date + " " + start_time)
+        end = datetime.datetime.fromisoformat(start_date + " " + end_time)    
+        response = scheduler.GetEvents(start_time = start, end_time = end)
+        return response
+    
+    return "Vui lòng nhập đúng định dạng: <thời gian bắt đầu> đến/to <thời gian kết thúc>\n <ngày muốn kiểm tra>"
+
+# async def get_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     # Ưu tiên lấy message từ update.message, nếu không có thì lấy từ update.edited_message
+#     message = update.message or update.edited_message
+#     if not message or not message.text:
+#         await update.message.reply_text("Không dùng Edit message")
+#         print("Edit message, không xử lý")
+#         return  # bỏ qua update không có text
+    
+#     text = message.text.replace("/event", "").strip()
+#     print(f"got text: {text}\n")
+
+#     response = get_event_process(text)
+
+#     await update.message.reply_text(response)
+#     return ASK_TIME_RANGE
 
 async def get_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Ưu tiên lấy message từ update.message, nếu không có thì lấy từ update.edited_message
-    message = update.message or update.edited_message
-    if not message or not message.text:
-        await update.message.reply_text("Không dùng Edit message")
-        print("Edit message, không xử lý")
-        return  # bỏ qua update không có text
-    
-    text = message.text.replace("/event", "").strip()
-    print(f"got text: {text}\n")
+    print("Get event process start")
 
+    await update.message.reply_text("Hãy cho tôi biết khoảng thời gian bạn muốn kiểm tra:")
+    await update.message.reply_text("Hãy nhập theo định dạng: \"<date> <time>to/đến <date> <time>\" \nor \"<date>\"")
+    return ASK_TIME_RANGE
+
+async def ask_time_range(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
     response = get_event_process(text)
-
     await update.message.reply_text(response)
-    return
+    if response == "Vui lòng nhập đúng định dạng: <thời gian bắt đầu> đến/to <thời gian kết thúc>\n <ngày muốn kiểm tra>":
+        return ASK_TIME_RANGE
+    return ConversationHandler.END
 
 async def CMD_today_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response = scheduler.GetEvents()
@@ -149,7 +234,7 @@ async def CMD_today_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def CMD_week_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    week_start = scheduler.today() - datetime.timedelta(days=datetime.datetime.now().weekday(),hours=7)
+    week_start = scheduler.today() - datetime.timedelta(days=datetime.datetime.now().weekday())
     week_end = week_start + datetime.timedelta(days=7)
 
     response = scheduler.GetEvents(start_time=week_start, end_time=week_end)
@@ -367,13 +452,22 @@ async def create_event_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("✅ Tạo sự kiện thành công")
         return ConversationHandler.END
 
-conv_handler = ConversationHandler(
+creat_event_conv_handler = ConversationHandler(
     entry_points=[CommandHandler('create_event', ask_event_info)],
     states={
         ASK_START_TIME: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_event_start)],
         ASK_END_TIME: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_event_end)],
         ASK_SUMARY: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_summary)],
         ASK_OPTIONS: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_options),CommandHandler('oke', create_event_handler),],
+
+    },
+    fallbacks=[CommandHandler('cancel', cancel_handler)],
+)
+
+get_event_conv_handler = ConversationHandler(
+    entry_points=[CommandHandler('event', get_event_handler)],
+    states={ 
+        ASK_TIME_RANGE: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_time_range)],
     },
     fallbacks=[CommandHandler('cancel', cancel_handler)],
 )
@@ -389,13 +483,14 @@ if __name__ == '__main__':
     #COMMAND
     app.add_handler(CommandHandler('start',start_handler))
     app.add_handler(CommandHandler('end',end_handler))
-    app.add_handler(CommandHandler('event',get_event_handler))
+    # app.add_handler(CommandHandler('event',get_event_handler))
     app.add_handler(CommandHandler('today',CMD_today_handler))
     app.add_handler(CommandHandler('week',CMD_week_handler))
     app.add_handler(CommandHandler('month',CMD_month_handler))
 
     #CONVERSATION
-    app.add_handler(conv_handler)
+    app.add_handler(creat_event_conv_handler)
+    app.add_handler(get_event_conv_handler)
 
     #MESSAGE
     # app.add_handler(MessageHandler(filters.TEXT, message_handler))

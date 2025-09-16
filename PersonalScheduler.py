@@ -305,10 +305,13 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
             singleDay = True
             end_time = start_time + datetime.timedelta(days=1)
 
-        if singleDay:
-            timeMin = start_time - datetime.timedelta(hours=7)
-        else :
-            timeMin = start_time
+        start_time = start_time - datetime.timedelta(hours=7)
+        end_time = end_time - datetime.timedelta(hours=7)
+
+        # if singleDay:
+        #     timeMin = start_time - datetime.timedelta(hours=7)
+        # else :
+        #     timeMin = start_time
 
         print(Fore.RED + f"--- Lịch: {start_time.isoformat()} ---> {end_time.isoformat()} ---" + Fore.RESET)
 
@@ -331,7 +334,7 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
 
                     events_result = service.events().list(
                         calendarId=cal_id,
-                        timeMin=timeMin.isoformat() + "Z",
+                        timeMin=start_time.isoformat() + "Z",
                         timeMax=end_time.isoformat() + "Z",
                         maxResults=num,
                         singleEvents=True,
@@ -354,7 +357,7 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
 
                     # Lọc sự kiện đúng ngày
                     if singleDay:
-                        target_day = start_time.date()
+                        target_day = end_time.date()
 
                         filtered_events = []
                         for event in events:
@@ -389,13 +392,11 @@ def GetEvents(start_time=None, end_time=None, num: int = 2500, CalList = None):
             # result = result + check_prev_date(event['start']) + f"\t[{event['start_str']} ---> {event['end_str']}]: {event['summary']} \t({event['cal_name']})\n"
 
         if result == "":
-            if start_time == end_time - datetime.timedelta(days=1):
-                if region == 'vi':
-                    result = f"Không có sự kiện nào trong ngày {iso_to_vn_date(start_time.__str__().split()[0])}"
-                else:
-                    result = f"Không có sự kiện nào trong ngày {start_time.__str__().split()[0]}"
-            else:
-                result = f"Không có sự kiện nào từ ngày {start_time.__str__().split()[0]} đến ngày {end_time.__str__().split()[0]}"
+            result = "Không có sự kiện"
+            # if singleDay:
+            #     result = f"Không có sự kiện nào trong ngày {iso_to_vn_date(end_time.__str__().split()[0])}"
+            # else:
+            #     result = f"Không có sự kiện nào từ {start_time.__str__().split()[0]} đến ngày {end_time.__str__().split()[0]}"
 
         print("\n" + Fore.YELLOW + f"result: \n{result}" + Fore.RESET)
         return result
@@ -460,13 +461,16 @@ def CreateEvent(service, summary: str, time_str: str, calendar_id: str = "primar
 if __name__ == "__main__":
     SchedulerStart()
 
-    # start = datetime.datetime.fromisoformat('2025-08-31')
-    # start = today()
+    start = datetime.datetime.fromisoformat('2025-09-16 20:00')
+    end = datetime.datetime.fromisoformat('2025-09-16 23:00')
+    
+    start = today()
     # end = start + timedelta(days=2)
+    output = GetEvents(start_time=start, end_time=end)
     # output = GetEvents(start_time=start)
     # output = GetEvents()
 
-    CreateEvent(service, "Test event", "2025-09-11 07:00 to 2025-09-13")
+    # CreateEvent(service, "Test event", "2025-09-11 07:00 to 2025-09-13")
 
     print("\n================================================")
     print("OUTPUT:")
