@@ -103,13 +103,16 @@ def normalize_date_string(date_str: str) -> str:
     """
     try:
         # Trường hợp đã là ISO
+        print("kiểm tra ISO : ", date_str)
         datetime.datetime.fromisoformat(date_str)
+        # print("ISO")
         return date_str
     except ValueError:
         pass
 
     # Trường hợp dd/mm/yyyy
     if "/" in date_str:
+        # print("dd/mm/yyyy")
         try:
             day, month, year = date_str.split("/")
             return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
