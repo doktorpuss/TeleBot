@@ -11,6 +11,16 @@ from googleapiclient.errors import HttpError
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
+
+# Lấy đường dẫn tuyệt đối đến thư mục hiện tại (Scheduler)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Ghép thành đường dẫn tới token.json
+TOKEN_URL = os.path.join(BASE_DIR, 'token/token.json')
+
+# Ghép thành đường dẫn tới file Credential.json t
+CREDENTIAL_URL = os.path.join(BASE_DIR, 'token/CalendarCredential.json')
+
 creds = None
 service = None
 
@@ -215,8 +225,8 @@ def SchedulerStart():
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists("token/token.json"):
-        creds = Credentials.from_authorized_user_file("token/token.json", SCOPES)
+    if os.path.exists(TOKEN_URL):
+        creds = Credentials.from_authorized_user_file(TOKEN_URL, SCOPES)
 
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -224,12 +234,12 @@ def SchedulerStart():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                "Scheduler/token/CalendarCredential.json", SCOPES
+                CREDENTIAL_URL, SCOPES
             )
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open("Scheduler/token/token.json", "w") as token:
+        with open(TOKEN_URL, "w") as token:
             token.write(creds.to_json())
 
     try:

@@ -10,6 +10,7 @@ ndayinmonth = [31,28,31,30,31,30,31,31,30,31,30,31]
 
 serving = False
 
+
 #utilities
 
 def replace_date_ref_by_exact_date(text):
