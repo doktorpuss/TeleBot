@@ -1,0 +1,67 @@
+from expense_manager import crud
+from expense_manager.db import get_session,init_db
+from colorama import Fore,Style
+
+# ====== Tạo db (chỉ cần làm khi chưa có db) ======
+init_db()
+
+# ================= Lấy session ===================
+session = get_session()
+
+# ================= Thêm expense ==================
+# expense = crud.add_expense(
+#     session,
+#     user_id=1,
+#     wallet_id=1,
+#     category_id=1,
+#     amount=35000,
+#     expense_date="2025-10-1",
+#     note="Ăn trưa"
+# )
+# print("Đã thêm:", expense.expense_id)
+
+# ================= Thêm income ==================
+income = crud.add_income(
+    session,
+    user_id=1,
+    wallet_id=1,
+    category_id=1,
+    amount=70000,
+    income_date="2025-10-1",
+    note="Test"
+)
+print("Đã thêm:", income.income_id)
+
+# ======= Lấy danh sách chi tiêu theo tháng ======= 
+expenses = crud.list_expenses(session=session,user_id=1, month="2025-09")
+print(Fore.RED)
+for e in expenses:
+    print(e.expense_date, e.amount, e.category.category_name,e.note, )
+print(Fore.WHITE)
+    
+
+# ========== Tìm user_id theo user_name ===========
+user_name = "Quang"
+uid = crud.get_user_id(session=session, user_name=user_name)
+print(Fore.GREEN)
+print(f"User: {user_name} \t UID: {uid}")
+print(Fore.WHITE)
+
+
+# ====== Tìm category_id theo category_name =======
+user_name = "Quang"
+category_name = "Đi lại"
+category_id = crud.get_category_id(session=session, user_name=user_name, category_name=category_name)                    
+print(Fore.LIGHTCYAN_EX)
+print(f"User: {user_name} \t Category: {category_name} \t Category ID: {category_id}")
+print(Fore.WHITE)
+
+# ========== Liệt kê danh sách category ===========
+user_name = "Quang"
+income_categories = crud.get_categories_list(session=session, user_name=user_name, type=crud.models.EXPENSE)
+print(Fore.RED)
+print(income_categories)
+print(Fore.WHITE)
+
+# ['💵 Lương', '💸 Thưởng', '📈 Đầu tư', '💼 Kinh doanh', 'Khác']
+# ['🍔 Ăn uống', '🏍  Đi lại', '🏠 Nhà ở', '🎮 Giải trí', '🛒 Mua sắm', '💊 Sức khỏe', '📖 Giáo dục', 'Khác']

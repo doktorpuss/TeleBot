@@ -1,5 +1,5 @@
 import secrete
-import TeleBotScheduleUtil as scheduler
+from Scheduler import TeleBotScheduleUtil as scheduler
 from telegram import Update
 from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes,ConversationHandler
 

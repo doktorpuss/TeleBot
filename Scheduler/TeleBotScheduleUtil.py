@@ -4,7 +4,7 @@ from colorama import Fore,Back,Style
 from telegram import Update
 from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes,ConversationHandler
 
-import PersonalScheduler as scheduler
+from . import PersonalScheduler as scheduler
 
 ndayinmonth = [31,28,31,30,31,30,31,31,30,31,30,31]
 

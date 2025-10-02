@@ -224,49 +224,16 @@ def SchedulerStart():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                "token/CalendarCredential.json", SCOPES
+                "Scheduler/token/CalendarCredential.json", SCOPES
             )
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open("token/token.json", "w") as token:
+        with open("Scheduler/token/token.json", "w") as token:
             token.write(creds.to_json())
 
     try:
         service = build("calendar","v3",credentials=creds)
-
-        # now = datetime.datetime.now().isoformat() + "Z"
-        # end = (datetime.datetime.now() + datetime.timedelta(days=1)).isoformat() + "Z"
-
-        # # Get calendar list 
-        # calendar_list = service.calendarList().list().execute()
-
-        # print("2-----------------------------")
-
-        # for calendar_entry in calendar_list['items']:
-        #     cal_id = calendar_entry['id']
-        #     cal_name = calendar_entry['summary']
-        #     print(f"\n--- Lịch: {cal_name} ---")
-
-        #     events_result = service.events().list(
-        #         calendarId=cal_id,
-        #         timeMin=now,
-        #         timeMax=None,
-        #         maxResults=10,
-        #         singleEvents=True,
-        #         orderBy="startTime",
-        #     ).execute()
-
-        #     events = events_result.get('items', [])
-
-        #     if not events:
-        #         print("No upcoming events found.")
-        #         return
-            
-        #     for event in events:
-        #         start = event['start'].get('dateTime', event['start'].get('date'))
-        #         end = event['end'].get('dateTime', event['end'].get('date'))
-        #         print(f"[{start} ---> {end} ]: {event.get('summary', 'No Title')}")
 
     except HttpError as error:
         print(f"An error occurred: {error}")
