@@ -481,6 +481,14 @@ get_event_conv_handler = ConversationHandler(
     fallbacks=[CommandHandler('cancel', cancel_handler)],
 )
 
-async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"Update {update} cause error {context.error}")
-    await update.message.reply_text(f"{context.error}")
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    print(f"Error: {context.error}")
+
+    # Nếu có update và là tin nhắn
+    if update and getattr(update, "message", None):
+        await update.message.reply_text("⚠️ Lỗi: " + str(context.error))
+    elif update and getattr(update, "callback_query", None):
+        await update.callback_query.message.reply_text("⚠️ Lỗi: " + str(context.error))
+    else:
+        # Trường hợp lỗi hệ thống (ví dụ network), không gửi cho user
+        print("Lỗi hệ thống, không gửi thông báo cho user.")

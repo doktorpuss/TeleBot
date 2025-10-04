@@ -5,3 +5,5 @@ __pycache__
 CalendarCredential.json
 TeleBot
 test.ipynb
+dump.py
+expenses.db
