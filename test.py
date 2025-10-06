@@ -1,5 +1,6 @@
 from ExpenseManager import crud
 from ExpenseManager.db import get_session,init_db
+from ExpenseManager.TeleBotFinManUtil import make_report_img,make_type_pie_chart,make_category_pie_chart
 from colorama import Fore,Style
 import pandas as pd
 
@@ -9,29 +10,29 @@ import pandas as pd
 # ================= Lấy session ===================
 session = get_session()
 
-# ================= Thêm expense ==================
-expense = crud.add_expense(
-    session,
-    user_id=1,
-    wallet_id=1,
-    category_id=2,
-    amount=70000,
-    expense_date="2025-10-1",
-    note="Ăn trưa"
-)
-print("Đã thêm:", expense.expense_id)
+# # ================= Thêm expense ==================
+# expense = crud.add_expense(
+#     session,
+#     user_id=1,
+#     wallet_id=1,
+#     category_id=2,
+#     amount=70000,
+#     expense_date="2025-10-5",
+#     note="Ăn trưa"
+# )
+# print("Đã thêm:", expense.expense_id)
 
-# ================= Thêm income ==================
-income = crud.add_income(
-    session,
-    user_id=1,
-    wallet_id=1,
-    category_id=9,
-    amount=70000,
-    income_date="2025-10-1",
-    note="Test"
-)
-print("Đã thêm:", income.income_id)
+# # ================= Thêm income ==================
+# income = crud.add_income(
+#     session,
+#     user_id=1,
+#     wallet_id=1,
+#     category_id=9,
+#     amount=70000,
+#     income_date="2025-10-2",
+#     note="Test"
+# )
+# print("Đã thêm:", income.income_id)
 
 # ======= Lấy danh sách chi tiêu theo tháng ======= 
 expenses = crud.list_expenses(session=session,user_id=1, month="2025-09")
@@ -69,7 +70,10 @@ transactions = crud.list_transactions(session,1,"2025-10")
 print(transactions)
 
 dt = pd.DataFrame(transactions)
-print(dt)
+report = make_type_pie_chart(dt,"expense")
+# report = make_category_pie_chart(dt,"🍔 Ăn uống")
+print("Report created at:", report)
+
 
 
 # ['💵 Lương', '💸 Thưởng', '📈 Đầu tư', '💼 Kinh doanh', 'Khác']

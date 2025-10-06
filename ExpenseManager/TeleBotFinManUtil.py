@@ -4,6 +4,17 @@ from colorama import Fore,Back,Style
 from telegram import Update,InlineKeyboardButton,InlineKeyboardMarkup
 from telegram.ext import CallbackQueryHandler,CommandHandler,MessageHandler,filters,ContextTypes,ConversationHandler
 
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+from matplotlib import rcParams
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+
+CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 session = db.get_session()
 
@@ -278,13 +289,114 @@ add_expense_conv_handler = ConversationHandler(
     fallbacks=[CommandHandler('cancel', cancel_handler)],
 )
 
-# income = crud.add_income(
-#     session,
-#     user_id=1,
-#     wallet_id=1,
-#     category_id=1,
-#     amount=70000,
-#     income_date="2025-10-1",
-#     note="Test"
-# )
-# print("Đã thêm:", income.income_id)
+# =================== GENERATE REPORT ===================
+
+import plotly.graph_objects as go
+import plotly.io as pio
+
+# # Bỏ sandbox để tránh lỗi "browser closed immediately"
+# pio.defaults.chromium_args = ["--no-sandbox"]
+
+# # Nếu cần chỉ định trình duyệt cụ thể (tùy hệ thống)
+# pio.defaults.chromium_executable = "/snap/bin/chromium"  # hoặc "/usr/bin/google-chrome"
+
+
+REPORT_SAVE_DIRECTORY = "reports"
+PIE_CHART_SAVE_DIRECTORY = "pie_chart"
+CREATED_DATE =  datetime.datetime.now().__str__().split()[0]
+
+def make_report_img(history: pd.DataFrame, month: str):
+    report_url = f"{CURRENT_DIRECTORY}/{REPORT_SAVE_DIRECTORY}/report_expense_pie_{month}.png"
+
+    fig, ax = plt.subplots(figsize=(10, len(history) * 0.4 + 1))
+    ax.axis("off")
+    table = ax.table(
+        cellText=history.values,
+        colLabels=history.columns,
+        loc="center",
+        cellLoc="center"
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 1.3)
+
+    plt.title(f"Lịch sử giao dịch {month}", pad=20)
+    plt.savefig(report_url)
+    plt.close()
+
+    return report_url
+
+    # print(f"✅ Báo cáo đã tạo xong cho {month}:\n - report_expense_pie_{month}.png\n - report_transactions_{month}.png")
+
+def make_type_pie_chart(history: pd.DataFrame, type: str):
+    pie_url = f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}/pie_type_{CREATED_DATE}.png"
+
+    expense = history[history["type"] == type]
+    expense = expense.groupby(["category"])["amount"].sum().reset_index()
+    expense = expense.sort_values(by="amount", ascending=False)
+
+    if expense.empty:
+        return None
+
+    fig = go.Figure(data=[
+        go.Pie(
+            labels=expense["category"],
+            values=expense["amount"],
+            textinfo="label+percent",
+            # insidetextorientation="radial",
+            hoverinfo="label+value+percent",
+            textposition="outside"
+        )
+    ])
+
+    fig.update_layout(
+        # title=f"Cơ cấu chi tiêu theo loại: {type}",
+        font=dict(family="Dongle", size=40, color="black"),
+        showlegend=False,
+        margin=dict(t=80, b=20, l=20, r=20),
+        width=700,
+        height=700
+    )
+
+    fig.update_traces(
+    textfont=dict(family="Dongle, sans-serif", size=40),
+    texttemplate="<b>%{label}</b><br>%{percent}"
+    )
+
+    os.makedirs(f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}", exist_ok=True)
+    fig.write_image(pie_url)  # cần cài kaleido
+    return pie_url
+
+
+def make_category_pie_chart(history: pd.DataFrame, category: str):
+    pie_url = f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}/pie_category_{CREATED_DATE}.png"
+
+    expense = history[history["category"] == category]
+    expense = expense.groupby(["note"])["amount"].sum().reset_index()
+    expense = expense.sort_values(by="amount", ascending=False)
+
+    if expense.empty:
+        return None
+
+    fig = go.Figure(data=[
+        go.Pie(
+            labels=expense["note"],
+            values=expense["amount"],
+            textinfo="label+percent",
+            insidetextorientation="radial",
+            hoverinfo="label+value+percent",
+        )
+    ])
+
+    fig.update_layout(
+        # title=f"Cơ cấu chi tiêu trong hạng mục: {category}",
+        font=dict(size=30),
+        showlegend=False,
+        margin=dict(t=80, b=20, l=20, r=20),
+        width=700,
+        height=700
+    )
+
+    os.makedirs(f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}", exist_ok=True)
+    fig.write_image(pie_url)
+    return pie_url
