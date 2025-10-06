@@ -35,9 +35,24 @@ def list_expenses(session, user_id, month=None):
     query = session.query(models.Expense).filter(models.Expense.user_id == user_id)
     if month:
         query = query.filter(models.Expense.expense_date.like(f"{month}-%"))  # month="2025-09"
-    results = query.options(joinedload(models.Expense.category)).all()
-    session.close()
-    return results
+    results = query.options(
+        joinedload(models.Expense.wallet),
+        joinedload(models.Expense.category)
+    ).all()
+
+    expenses = []
+    for e in results:
+        expenses.append({
+            "id": e.expense_id,
+            "type": "expense",
+            "amount": e.amount,
+            "date": e.expense_date,
+            "note": e.note,
+            "category": e.category.category_name if e.category else None,
+            "wallet": e.wallet.wallet_name if e.wallet else None,
+            "wallet_balance": e.wallet_balance
+        })
+    return expenses
 
 def add_income(session, user_id, wallet_id, category_id, amount, income_date, note=None):
     # Nếu amount là float thì convert sang Decimal
@@ -69,9 +84,24 @@ def list_incomes(session, user_id, month=None):
     query = session.query(models.Income).filter(models.Income.user_id == user_id)
     if month:
         query = query.filter(models.Income.income_date.like(f"{month}-%"))
-    results = query.all()
-    session.close()
-    return results
+    results = query.options(
+        joinedload(models.Income.wallet),
+        joinedload(models.Income.category)
+    ).all()
+
+    incomes = []
+    for i in results:
+        incomes.append({
+            "id": i.income_id,
+            "type": "income",
+            "amount": i.amount,
+            "date": i.income_date,
+            "note": i.note,
+            "category": i.category.category_name if i.category else None,
+            "wallet": i.wallet.wallet_name if i.wallet else None,
+            "wallet_balance": i.wallet_balance
+        })
+    return incomes
 
 def list_categories(session, user_id = 1,type = None):
     query = session.query(models.Category).filter(models.Category.user_id == user_id)
@@ -161,41 +191,12 @@ def get_wallet_balance(session, wallet_id: int) -> float | None:
     return float(wallet.balance) if wallet else None
 
 def list_transactions(session, user_id, month=None):
-    """
-    Tổng hợp incomes + expenses trong 1 tháng (nếu có),
-    sắp xếp theo ngày và trả về list các dict.
-    """
     expenses = list_expenses(session, user_id, month)
     incomes = list_incomes(session, user_id, month)
 
-    transactions = []
+    transactions = expenses + incomes
+    transactions.sort(key=lambda x: x["date"])
 
-    # Convert expenses
-    for e in expenses:
-        transactions.append({
-            "id": e.expense_id,
-            "type": "expense",
-            "amount": float(e.amount),
-            "note": e.note,
-            "date": e.expense_date,
-            "wallet_id": e.wallet_id,
-            "category_id": e.category_id,
-            "category_name": e.category.category_name if hasattr(e, "category") else None
-        })
-
-    # Convert incomes
-    for i in incomes:
-        transactions.append({
-            "id": i.income_id,
-            "type": "income",
-            "amount": float(i.amount),
-            "note": i.note,
-            "date": i.income_date,
-            "wallet_id": i.wallet_id,
-            "category_id": i.category_id
-        })
-
-    # Sort theo date
-    transactions = sorted(transactions, key=lambda x: x["date"])
-
+    for id in range(len(transactions)):
+        transactions[id]["id"] = id
     return transactions

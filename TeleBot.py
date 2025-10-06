@@ -11,7 +11,7 @@ if __name__ == '__main__':
     #COMMAND
     # app.add_handler(CommandHandler('start',scheduler.start_handler))
     # app.add_handler(CommandHandler('end',scheduler.end_handler))
-    # # app.add_handler(CommandHandler('event',get_event_handler))
+    # app.add_handler(CommandHandler('event',get_event_handler))
     # app.add_handler(CommandHandler('today',scheduler.CMD_today_handler))
     # app.add_handler(CommandHandler('week',scheduler.CMD_week_handler))
     # app.add_handler(CommandHandler('month',scheduler.CMD_month_handler))

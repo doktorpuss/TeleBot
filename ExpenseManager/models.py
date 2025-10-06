@@ -63,6 +63,7 @@ class Expense(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     category = relationship("Category", backref="expenses")
+    wallet = relationship("Wallet", backref="expenses")
 
 class Income(Base):
     __tablename__ = "incomes"
@@ -75,3 +76,6 @@ class Income(Base):
     income_date = Column(Date, nullable=False)
     note = Column(Text)
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+    category = relationship("Category", backref="incomes")
+    wallet = relationship("Wallet", backref="incomes")
