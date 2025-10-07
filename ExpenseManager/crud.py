@@ -110,11 +110,6 @@ def list_categories(session, user_id = 1,type = None):
     results = query.all()
     return results
 
-def list_wallets(session, user_id = 1):
-    query = session.query(models.Wallet).filter(models.Wallet.user_id == user_id)
-    results = query.all()
-    return results
-
 def get_categories_list(session, user_id = 1, user_name = None ,type = None):
     
     # If user_name not None then find id match usser_name
@@ -189,6 +184,20 @@ def get_wallet_id(session, user_id: int, wallet_name: str) -> int | None:
 def get_wallet_balance(session, wallet_id: int) -> float | None:
     wallet = session.query(models.Wallet).filter(models.Wallet.wallet_id == wallet_id).first()
     return float(wallet.balance) if wallet else None
+
+def list_wallets(session, user_id = 1):
+    query = session.query(models.Wallet).filter(models.Wallet.user_id == user_id)
+    results = query.all()
+
+    wallet_list = []
+    for wallet in results:
+        wallet_list.append({
+            "id": wallet.wallet_id,
+            "name": wallet.wallet_name,
+            "balance": wallet.balance
+        })
+    return results
+
 
 def list_transactions(session, user_id, month=None):
     expenses = list_expenses(session, user_id, month)

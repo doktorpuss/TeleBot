@@ -1,6 +1,6 @@
 from ExpenseManager import crud
 from ExpenseManager.db import get_session,init_db
-from ExpenseManager.TeleBotFinManUtil import make_report_img,make_type_pie_chart,make_category_pie_chart
+from ExpenseManager.TeleBotFinManUtil import make_type_pie_chart,make_category_pie_chart,make_history_table, make_monthly_report
 from colorama import Fore,Style
 import pandas as pd
 
@@ -65,16 +65,23 @@ print(Fore.RED)
 print(income_categories)
 print(Fore.WHITE)
 
-# ===== Liệt kê lịch sử giao dịch trong tháng =====
-transactions = crud.list_transactions(session,1,"2025-10")
-print(transactions)
+# ===== Vẽ bảng liệt kê lịch sử giao dịch trong tháng =====
+# transactions = crud.list_transactions(session,1,"2025-10")
+# dt = pd.DataFrame(transactions)
+# table = make_history_table(dt)
+# print("Table created at:", table)
 
-dt = pd.DataFrame(transactions)
-report = make_type_pie_chart(dt,"expense")
-# report = make_category_pie_chart(dt,"🍔 Ăn uống")
+
+# ===== Vẽ biểu đồ cơ cấu giao dịch trong tháng =====
+# transactions = crud.list_transactions(session,1,"2025-10")
+# dt = pd.DataFrame(transactions)
+# report = make_type_pie_chart(dt,"expense")
+# # report = make_category_pie_chart(dt,"🍔 Ăn uống")
+# print("Report created at:", report)
+
+# ============= Tạo báo cáo chi tiêu tháng =============
+report = make_monthly_report("2025-10","Quang")
 print("Report created at:", report)
-
-
 
 # ['💵 Lương', '💸 Thưởng', '📈 Đầu tư', '💼 Kinh doanh', 'Khác']
 # ['🍔 Ăn uống', '🏍  Đi lại', '🏠 Nhà ở', '🎮 Giải trí', '🛒 Mua sắm', '💊 Sức khỏe', '📖 Giáo dục', 'Khác']

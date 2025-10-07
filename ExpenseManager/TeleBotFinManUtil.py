@@ -31,6 +31,12 @@ class TransactionInfo:
 
 transaction_info = TransactionInfo()
 
+def get_created_date():
+    return datetime.datetime.now().strftime("%Y-%m-%d")
+
+def get_this_month():
+    return datetime.datetime.now().strftime("%Y-%m")
+
 def normalize_date_string(date_str: str) -> str:
     """
     Chuẩn hóa chuỗi ngày về dạng ISO `YYYY-MM-DD`
@@ -289,114 +295,277 @@ add_expense_conv_handler = ConversationHandler(
     fallbacks=[CommandHandler('cancel', cancel_handler)],
 )
 
-# =================== GENERATE REPORT ===================
+# =================== PIE CHART REPORT ===================
+import altair as alt
+PIE_CHART_SAVE_DIRECTORY = f"{CURRENT_DIRECTORY}/reports/pie_chart"
 
-import plotly.graph_objects as go
-import plotly.io as pio
+# Tạo thư mục nếu chưa có
+os.makedirs(PIE_CHART_SAVE_DIRECTORY, exist_ok=True)
 
-# # Bỏ sandbox để tránh lỗi "browser closed immediately"
-# pio.defaults.chromium_args = ["--no-sandbox"]
-
-# # Nếu cần chỉ định trình duyệt cụ thể (tùy hệ thống)
-# pio.defaults.chromium_executable = "/snap/bin/chromium"  # hoặc "/usr/bin/google-chrome"
-
-
-REPORT_SAVE_DIRECTORY = "reports"
-PIE_CHART_SAVE_DIRECTORY = "pie_chart"
-CREATED_DATE =  datetime.datetime.now().__str__().split()[0]
-
-def make_report_img(history: pd.DataFrame, month: str):
-    report_url = f"{CURRENT_DIRECTORY}/{REPORT_SAVE_DIRECTORY}/report_expense_pie_{month}.png"
-
-    fig, ax = plt.subplots(figsize=(10, len(history) * 0.4 + 1))
-    ax.axis("off")
-    table = ax.table(
-        cellText=history.values,
-        colLabels=history.columns,
-        loc="center",
-        cellLoc="center"
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1, 1.3)
-
-    plt.title(f"Lịch sử giao dịch {month}", pad=20)
-    plt.savefig(report_url)
-    plt.close()
-
-    return report_url
-
-    # print(f"✅ Báo cáo đã tạo xong cho {month}:\n - report_expense_pie_{month}.png\n - report_transactions_{month}.png")
-
-def make_type_pie_chart(history: pd.DataFrame, type: str):
-    pie_url = f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}/pie_type_{CREATED_DATE}.png"
-
-    expense = history[history["type"] == type]
-    expense = expense.groupby(["category"])["amount"].sum().reset_index()
-    expense = expense.sort_values(by="amount", ascending=False)
-
-    if expense.empty:
+def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: str, title: str):
+    """
+    Tạo biểu đồ tròn (pie chart) bằng Altair và lưu thành file PNG.
+    
+    Parameters:
+        df (pd.DataFrame): Dữ liệu đầu vào
+        group_col (str): Tên cột để nhóm dữ liệu (ví dụ: 'category' hoặc 'note')
+        value_col (str): Tên cột chứa giá trị (ví dụ: 'amount')
+        save_path (str): Đường dẫn file PNG để lưu
+        title (str): Tiêu đề biểu đồ
+    """
+    if df.empty:
         return None
 
-    fig = go.Figure(data=[
-        go.Pie(
-            labels=expense["category"],
-            values=expense["amount"],
-            textinfo="label+percent",
-            # insidetextorientation="radial",
-            hoverinfo="label+value+percent",
-            textposition="outside"
-        )
-    ])
+    # Đảm bảo cột giá trị là dạng float
+    df[value_col] = pd.to_numeric(df[value_col], errors='coerce').fillna(0.0)
 
-    fig.update_layout(
-        # title=f"Cơ cấu chi tiêu theo loại: {type}",
-        font=dict(family="Dongle", size=40, color="black"),
-        showlegend=False,
-        margin=dict(t=80, b=20, l=20, r=20),
-        width=700,
-        height=700
-    )
+    # Gộp và tính tổng
+    grouped = df.groupby(group_col)[value_col].sum().reset_index()
+    grouped = grouped.sort_values(by=value_col, ascending=False)
 
-    fig.update_traces(
-    textfont=dict(family="Dongle, sans-serif", size=40),
-    texttemplate="<b>%{label}</b><br>%{percent}"
-    )
-
-    os.makedirs(f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}", exist_ok=True)
-    fig.write_image(pie_url)  # cần cài kaleido
-    return pie_url
-
-
-def make_category_pie_chart(history: pd.DataFrame, category: str):
-    pie_url = f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}/pie_category_{CREATED_DATE}.png"
-
-    expense = history[history["category"] == category]
-    expense = expense.groupby(["note"])["amount"].sum().reset_index()
-    expense = expense.sort_values(by="amount", ascending=False)
-
-    if expense.empty:
+    if grouped.empty:
         return None
 
-    fig = go.Figure(data=[
-        go.Pie(
-            labels=expense["note"],
-            values=expense["amount"],
-            textinfo="label+percent",
-            insidetextorientation="radial",
-            hoverinfo="label+value+percent",
-        )
-    ])
+    # Thêm cột phần trăm (percentage)
+    total = grouped[value_col].sum()
+    grouped["percentage"] = (grouped[value_col] / total * 100).round(1)
 
-    fig.update_layout(
-        # title=f"Cơ cấu chi tiêu trong hạng mục: {category}",
-        font=dict(size=30),
-        showlegend=False,
-        margin=dict(t=80, b=20, l=20, r=20),
-        width=700,
-        height=700
+    # Biểu đồ cơ bản
+    chart = alt.Chart(grouped).mark_arc().encode(
+        theta=alt.Theta(f"{value_col}", stack=True),
+        color=alt.Color(f"{group_col}", legend=None)
     )
 
-    os.makedirs(f"{CURRENT_DIRECTORY}/{PIE_CHART_SAVE_DIRECTORY}", exist_ok=True)
-    fig.write_image(pie_url)
-    return pie_url
+    # Vẽ phần miếng bánh
+    pie = chart.mark_arc(radius=120, opacity=0.5, stroke='white', strokeWidth=2)
+
+    # Hiển thị phần trăm
+    percent = chart.mark_text(
+        radius=70,
+        size=24,
+        font='Dongle',
+        fontWeight='bold',
+        color='black'
+    ).encode(
+        text=alt.Text("percentage:Q", format=".1f")
+    )
+
+    # Hiển thị nhãn
+    label = chart.mark_text(
+        radius=180,
+        size=24,
+        font='Dongle',
+        fontWeight='bold',
+        color='black'
+    ).encode(
+        text=alt.Text(f"{group_col}:N")
+    )
+
+    # Kết hợp và lưu
+    final = (pie + percent + label)
+    final.save(save_path, scale_factor=4)
+
+    return save_path
+
+def make_type_pie_chart(history: pd.DataFrame, type_name: str):
+    pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_type_{get_created_date()}.png"
+    expense = history[history["type"] == type_name]
+    return make_pie_chart(expense, "category", "amount", pie_url, f"Cơ cấu chi tiêu theo loại: {type_name}")
+
+
+def make_category_pie_chart(history: pd.DataFrame, category_name: str):
+    pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_category_{get_created_date()}.png"
+    expense = history[history["category"] == category_name]
+    return make_pie_chart(expense, "note", "amount", pie_url, f"Cơ cấu chi tiêu trong hạng mục: {category_name}")
+
+# =================== TABLE REPORT ===================
+import imgkit
+
+HISTORY_TABLE_DIRECTORY = f"{CURRENT_DIRECTORY}/reports/transaction_history_table"
+
+# Tạo thư mục nếu chưa có
+os.makedirs(HISTORY_TABLE_DIRECTORY, exist_ok=True)
+
+def make_history_table(history: pd.DataFrame):
+    
+    df = history.drop(columns=["id"])
+    df = df[["type","wallet", "date", "category", "amount", "wallet_balance", "note"]]
+    df = df.rename(columns={
+        "wallet": "Ví giao dịch",
+        "date": "Ngày giao dịch",
+        "category": "Danh mục",
+        "amount": "Giá trị giao dịch",
+        "wallet_balance": "Số dư tài khoản",
+        "note": "Ghi chú"
+    })
+
+    # --------------------------
+    # Highlight nếu Future Value > 300
+    # --------------------------
+    def highlight_rows(row):
+        if row["type"] == "expense" :
+            return ['background-color: #ffb6b6'] * len(row)
+        return ['background-color: #a1ffb7'] * len(row)
+
+    # --------------------------
+    # Style bảng
+    # --------------------------
+    styled = (
+        df.style
+        .format({
+            "Giá trị giao dịch": "{:,.0f}",
+            "Số dư tài khoản": "{:,.0f}"
+        })
+        .apply(highlight_rows, axis=1)
+        .set_table_styles([
+            {'selector': 'table',
+            'props': [
+                ('border-collapse', 'collapse'),
+                ('margin', 'auto'),
+                ('font-family', '"Noto Color Emoji", Arial, sans-serif'),
+                ('font-size', '16px'),
+                ('color', '#333'),
+                ('border', '2px solid #2f5597'),
+                ('width', '100%'),
+            ]},
+            {'selector': 'th',
+            'props': [
+                ('background-color','#2f5597'),
+                ('color', 'white'),
+                ('padding', '8px'),
+                ('text-align', 'center'),
+                ('border', '1px solid #2f5597'),
+                ('font-weight', 'bold'),
+            ]},
+            {'selector': 'td',
+            'props': [
+                ('padding', '8px'),
+                ('text-align', 'center'),
+                ('border', '1px solid #a6a6a6'),
+            ]},
+            {'selector': 'tr:nth-child(even)',
+            'props': [('background-color', '#f9f9f9')]},
+        ])
+    )
+
+    # 👉 Ẩn cột "type" (chỉ khi render)
+    styled = styled.hide(axis="columns", subset=["type"])
+    html_table = styled.to_html()
+
+    # --------------------------
+    # HTML — bảng căn giữa ngang, co giãn dọc
+    # --------------------------
+    html_full = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <title>Sample Dataset</title>
+    <style>
+    body {{
+        background: #ffffff;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        padding: 40px 0;
+    }}
+    .container {{
+        background: white;
+        padding: 20px 40px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        text-align: center;
+    }}
+    h2 {{
+        font-family: Arial, sans-serif;
+        color: #2f5597;
+        border-bottom: 2px solid #2f5597;
+        display: inline-block;
+        padding-bottom: 4px;
+        margin-bottom: 10px;
+    }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        {html_table}
+    </div>
+    </body>
+    </html>
+    """
+
+    # --------------------------
+    # Xuất ảnh (không đặt height)
+    # --------------------------
+    options = {
+        'format': 'png',
+        'encoding': "UTF-8",
+        # 'width': 2000,   # chỉ cố định chiều ngang
+        'quiet': ''
+    }
+
+    save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_created_date()}.png"
+    imgkit.from_string(html_full, save_path, options=options)
+    return save_path
+
+# ============== Tạo report tháng ==============
+from PIL import Image,ImageFont,ImageDraw
+
+REPORT_SAVE_DIRECTORY = f"{CURRENT_DIRECTORY}/reports/month_reports"
+os.makedirs(REPORT_SAVE_DIRECTORY, exist_ok=True)
+
+def make_monthly_report(month: str,user: str,):
+    
+    user_id = crud.get_user_id(session,user)
+    df = pd.DataFrame(crud.list_transactions(session,user_id,month))
+
+    # Tạo ảnh pie chart
+    pie_chart = make_type_pie_chart(df, "expense")
+
+    # Tạo ảnh bảng lịch sử
+    history_table = make_history_table(df)
+
+    # Load created img
+    pie_img = Image.open(pie_chart)
+    history_img = Image.open(history_table)
+
+    # Load imgs size
+    pie_w,pie_h = pie_img.size
+    history_w,history_h = history_img.size
+
+    # Prepare for Tittle
+    year,month = month.split("-")
+    tittle = f"Báo cáo chi tiêu tháng {month} năm {year}"
+    tittle_h = 200
+    try:
+        font = ImageFont.truetype("Dongle-Bold.ttf", 60)  # font của bạn
+    except:
+        font = ImageFont.load_default()
+
+    # Resize pie img
+    pie_w = int(pie_w * 0.4)
+    pie_h = int(pie_h * 0.4)
+    pie_img = pie_img.resize((pie_w,pie_h),Image.Resampling.LANCZOS)
+
+    # Month report size
+    report_w = max(pie_w,history_w)
+    report_h = pie_h + history_h + tittle_h
+
+    # New white blank img
+    report_img = Image.new("RGB", (report_w, report_h), (255, 255, 255))
+
+    # Draw tittle
+    draw = ImageDraw.Draw(report_img)
+    text_width = draw.textlength(tittle, font=font)
+    x = (report_img.width - text_width) // 2
+    y = (tittle_h - font.size) // 2
+    draw.text((x, y), tittle, font=font, fill=(47, 85, 151))  # màu xanh đậm như bảng
+
+    # Paste imgs
+    report_img.paste(pie_img,((report_w - pie_w)//2,tittle_h))
+    report_img.paste(history_img,((report_w - history_w)//2,pie_h + tittle_h))
+
+    # Save report img
+    save_path = f"{REPORT_SAVE_DIRECTORY}/report_{get_created_date()}.png"
+    report_img.save(save_path)
+    return save_path
