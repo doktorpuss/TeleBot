@@ -203,6 +203,12 @@ def list_transactions(session, user_id, month=None):
     expenses = list_expenses(session, user_id, month)
     incomes = list_incomes(session, user_id, month)
 
+    print(expenses)
+    print(incomes)
+
+    if not expenses and not incomes:
+        return None
+    
     transactions = expenses + incomes
     transactions.sort(key=lambda x: x["date"])
 

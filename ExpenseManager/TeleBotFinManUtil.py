@@ -368,13 +368,13 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
     return save_path
 
 def make_type_pie_chart(history: pd.DataFrame, type_name: str):
-    pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_type_{get_created_date()}.png"
+    pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_type_{get_this_month()}.png"
     expense = history[history["type"] == type_name]
     return make_pie_chart(expense, "category", "amount", pie_url, f"Cơ cấu chi tiêu theo loại: {type_name}")
 
 
 def make_category_pie_chart(history: pd.DataFrame, category_name: str):
-    pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_category_{get_created_date()}.png"
+    pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_category_{get_this_month()}.png"
     expense = history[history["category"] == category_name]
     return make_pie_chart(expense, "note", "amount", pie_url, f"Cơ cấu chi tiêu trong hạng mục: {category_name}")
 
@@ -504,9 +504,76 @@ def make_history_table(history: pd.DataFrame):
         'quiet': ''
     }
 
-    save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_created_date()}.png"
+    save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
     imgkit.from_string(html_full, save_path, options=options)
     return save_path
+
+# Conversation states
+THIS_MONTH = "THIS_MONTH"
+OTHER_MONTH = "OTHER_MONTH"
+
+async def get_history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    reply_markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Tháng nay", callback_data="this")],
+        [InlineKeyboardButton("Tháng khác", callback_data="other")]]
+    )
+
+    await update.message.reply_text("Hãy chọn:", reply_markup=reply_markup)
+    return THIS_MONTH
+
+async def get_history_this_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+
+    if (update.callback_query.data == 'other'):
+        await update.callback_query.edit_message_text("Hãy nhập tháng theo định dạng : \n<tháng>/<năm> hoặc <năm>-<tháng>")
+        return OTHER_MONTH
+    
+    month = get_this_month()
+    print(Fore.GREEN + f"month: {month}" + Style.RESET_ALL)
+    
+    transactions = crud.list_transactions(session,1,month)
+    if (not transactions):
+        await update.message.reply_text("Không có giao dịch trong thời gian truy vấn")
+        return ConversationHandler.END
+    dt = pd.DataFrame(transactions)
+    table = make_history_table(dt)
+    print("Table created at:", table)
+
+    await update.callback_query.message.reply_photo(photo=open(table, "rb"))
+
+    return ConversationHandler.END
+
+async def get_history_other_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    month = update.message.text
+    if ('/' in month):
+        month = month.split('/')
+        month = f"{month[1]}-{month[0]}"
+    elif ('-' not in month):
+        await update.message.reply_text("Hãy nhập đúng định dạng : \n<tháng>/<năm> hoặc <năm>-<tháng>")
+        return OTHER_MONTH
+    
+    print(Fore.GREEN + f"month: {month}" + Style.RESET_ALL)
+
+    transactions = crud.list_transactions(session,1,month)
+    if (not transactions):
+        await update.message.reply_text("Không có giao dịch trong thời gian truy vấn")
+        return ConversationHandler.END
+    dt = pd.DataFrame(transactions)
+    table = make_history_table(dt)
+    print("Table created at:", table)
+
+    await update.message.reply_photo(photo=open(table, "rb"))
+
+    return ConversationHandler.END
+
+get_history_conv_handler = ConversationHandler(
+    entry_points=[CommandHandler('history', get_history_handler)],
+    states={
+        THIS_MONTH: [CallbackQueryHandler(get_history_this_month)],
+        OTHER_MONTH: [MessageHandler(filters.TEXT & ~ filters.COMMAND, get_history_other_month)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel_handler)],
+)
 
 # ============== Tạo report tháng ==============
 from PIL import Image,ImageFont,ImageDraw
@@ -517,7 +584,14 @@ os.makedirs(REPORT_SAVE_DIRECTORY, exist_ok=True)
 def make_monthly_report(month: str,user: str,):
     
     user_id = crud.get_user_id(session,user)
-    df = pd.DataFrame(crud.list_transactions(session,user_id,month))
+    if (not user_id):
+        return "User not found"
+
+    data = crud.list_transactions(session,user_id,month)
+    if (not data):
+        return "No transaction found"
+    
+    df = pd.DataFrame(data)
 
     # Tạo ảnh pie chart
     pie_chart = make_type_pie_chart(df, "expense")
@@ -566,6 +640,104 @@ def make_monthly_report(month: str,user: str,):
     report_img.paste(history_img,((report_w - history_w)//2,pie_h + tittle_h))
 
     # Save report img
-    save_path = f"{REPORT_SAVE_DIRECTORY}/report_{get_created_date()}.png"
+    save_path = f"{REPORT_SAVE_DIRECTORY}/report_{month}.png"
     report_img.save(save_path)
     return save_path
+
+# ================== CONVERSATION: MONTHLY REPORT ==================
+
+REPORT_THIS_MONTH = "REPORT_THIS_MONTH"
+REPORT_OTHER_MONTH = "REPORT_OTHER_MONTH"
+
+async def report_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Bắt đầu quy trình yêu cầu báo cáo chi tiêu"""
+    reply_markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Tháng này", callback_data="this")],
+        [InlineKeyboardButton("Tháng khác", callback_data="other")]
+    ])
+    await update.message.reply_text("🧾 Bạn muốn xem báo cáo chi tiêu tháng nào?", reply_markup=reply_markup)
+    return REPORT_THIS_MONTH
+
+
+async def report_this_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Xử lý khi chọn 'tháng này' hoặc chuyển sang nhập tháng khác"""
+    await update.callback_query.answer()
+
+    # Nếu chọn tháng khác → hỏi người dùng nhập tháng
+    if update.callback_query.data == "other":
+        await update.callback_query.edit_message_text(
+            "📅 Hãy nhập tháng theo định dạng:\n`<tháng>/<năm>` hoặc `<năm>-<tháng>`"
+        )
+        return REPORT_OTHER_MONTH
+
+    # Nếu chọn tháng này → tạo báo cáo trực tiếp
+    month = get_this_month()
+    user = "Quang"  # hoặc "Quang" nếu bạn test cố định
+    report_path = make_monthly_report(month, user)
+
+    if "User not found" in report_path:
+        await update.message.reply_text("⚠️ Không tìm thấy người dùng.")
+        return ConversationHandler.END
+
+    if "No transaction found" in report_path:
+        await update.message.reply_text("Không có giao dịch trong thời gian truy vấn")
+        return ConversationHandler.END
+
+    await update.callback_query.message.reply_photo(
+        photo=open(report_path, "rb")
+    )
+    return ConversationHandler.END
+
+
+async def report_other_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Xử lý khi người dùng nhập tháng tùy chọn"""
+    month = update.message.text.strip()
+
+    # Chuẩn hóa chuỗi tháng
+    if '/' in month:
+        try:
+            m, y = month.split('/')
+            month = f"{y}-{m.zfill(2)}"
+        except ValueError:
+            await update.message.reply_text("⚠️ Định dạng sai. Hãy nhập lại: `<tháng>/<năm>` hoặc `<năm>-<tháng>`")
+            return REPORT_OTHER_MONTH
+    elif '-' in month:
+        parts = month.split('-')
+        if len(parts) != 2:
+            await update.message.reply_text("⚠️ Định dạng sai. Hãy nhập lại: `<tháng>/<năm>` hoặc `<năm>-<tháng>`")
+            return REPORT_OTHER_MONTH
+    else:
+        await update.message.reply_text("⚠️ Định dạng sai. Hãy nhập lại: `<tháng>/<năm>` hoặc `<năm>-<tháng>`")
+        return REPORT_OTHER_MONTH
+    
+    print(Fore.LIGHTCYAN_EX + f"month: {month}" + Style.RESET_ALL)
+
+    # Tạo báo cáo
+    # user = update.effective_user.first_name
+    user = "Quang"
+    report_path = make_monthly_report(month, user)
+
+    if "User not found" in report_path:
+        await update.message.reply_text("⚠️ Không tìm thấy người dùng.")
+        return ConversationHandler.END
+
+    if "No transaction found" in report_path:
+        await update.message.reply_text("Không có giao dịch trong thời gian truy vấn")
+        return ConversationHandler.END
+
+    await update.message.reply_photo(
+        photo=open(report_path, "rb")
+    )
+    return ConversationHandler.END
+
+
+# ================== Conversation Handler ==================
+
+report_conv_handler = ConversationHandler(
+    entry_points=[CommandHandler("report", report_entry)],
+    states={
+        REPORT_THIS_MONTH: [CallbackQueryHandler(report_this_month)],
+        REPORT_OTHER_MONTH: [MessageHandler(filters.TEXT & ~filters.COMMAND, report_other_month)],
+    },
+    fallbacks=[CommandHandler("cancel", cancel_handler)],
+)

@@ -35,7 +35,7 @@ session = get_session()
 # print("Đã thêm:", income.income_id)
 
 # ======= Lấy danh sách chi tiêu theo tháng ======= 
-expenses = crud.list_expenses(session=session,user_id=1, month="2025-09")
+expenses = crud.list_expenses(session=session,user_id=1, month="2025-9")
 print(Fore.RED)
 for e in expenses:
     print(e.expense_date, e.amount, e.category.category_name,e.note, )
@@ -80,7 +80,7 @@ print(Fore.WHITE)
 # print("Report created at:", report)
 
 # ============= Tạo báo cáo chi tiêu tháng =============
-report = make_monthly_report("2025-10","Quang")
+report = make_monthly_report("2025-09","Quang")
 print("Report created at:", report)
 
 # ['💵 Lương', '💸 Thưởng', '📈 Đầu tư', '💼 Kinh doanh', 'Khác']
