@@ -1,6 +1,6 @@
 MessengerChatbot
 secrete.py
-token
+Scheduler/token/**.json 
 __pycache__
 CalendarCredential.json
 TeleBot
