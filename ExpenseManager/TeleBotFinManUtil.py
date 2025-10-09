@@ -381,12 +381,20 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
 def make_type_pie_chart(history: pd.DataFrame, type_name: str):
     pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_type_{get_this_month()}.png"
     expense = history[history["type"] == type_name]
+
+    if not expense:
+        return None
+
     return make_pie_chart(expense, "category", "amount", pie_url, f"Cơ cấu chi tiêu theo loại: {type_name}")
 
 
 def make_category_pie_chart(history: pd.DataFrame, category_name: str):
     pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_category_{get_this_month()}.png"
     expense = history[history["category"] == category_name]
+    
+    if not expense:
+        return None
+    
     return make_pie_chart(expense, "note", "amount", pie_url, f"Cơ cấu chi tiêu trong hạng mục: {category_name}")
 
 # =================== TABLE REPORT ===================
@@ -610,8 +618,15 @@ def make_monthly_report(month: str,user: str,):
     # Tạo ảnh bảng lịch sử
     history_table = make_history_table(df)
 
-    # Load created img
-    pie_img = Image.open(pie_chart)
+    # If no transaction:
+    if (not pie_chart and not history_table):
+        return "No transaction found"
+
+    # Load created img (if no expense then no pie chart (piechart is 10x10px white blank img))
+    if not pie_chart:
+        pie_chart = Image.new("RGB", (10, 10), (255, 255, 255))
+    else:
+        pie_img = Image.open(pie_chart)
     history_img = Image.open(history_table)
 
     # Load imgs size
