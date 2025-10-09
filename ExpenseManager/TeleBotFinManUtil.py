@@ -618,10 +618,6 @@ def make_monthly_report(month: str,user: str,):
     # Tạo ảnh bảng lịch sử
     history_table = make_history_table(df)
 
-    # If no transaction:
-    if (not pie_chart and not history_table):
-        return "No transaction found"
-
     # Load created img (if no expense then no pie chart (piechart is 10x10px white blank img))
     if not pie_chart:
         pie_chart = Image.new("RGB", (10, 10), (255, 255, 255))
