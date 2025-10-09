@@ -11,18 +11,19 @@ if __name__ == '__main__':
     #COMMAND
     # app.add_handler(CommandHandler('start',scheduler.start_handler))
     # app.add_handler(CommandHandler('end',scheduler.end_handler))
-    # app.add_handler(CommandHandler('event',get_event_handler))
-    # app.add_handler(CommandHandler('today',scheduler.CMD_today_handler))
-    # app.add_handler(CommandHandler('week',scheduler.CMD_week_handler))
-    # app.add_handler(CommandHandler('month',scheduler.CMD_month_handler))
+    # app.add_handler(CommandHandler('event',scheduler.get_event_handler))
+    app.add_handler(CommandHandler('today',scheduler.CMD_today_handler))
+    app.add_handler(CommandHandler('week',scheduler.CMD_week_handler))
+    app.add_handler(CommandHandler('month',scheduler.CMD_month_handler))
 
     # #CONVERSATION
-    # app.add_handler(scheduler.creat_event_conv_handler)
-    # app.add_handler(scheduler.get_event_conv_handler)
+    app.add_handler(scheduler.creat_event_conv_handler)
+    app.add_handler(scheduler.get_event_conv_handler)
     app.add_handler(finman.add_income_conv_handler)
     app.add_handler(finman.add_expense_conv_handler)
-    app.add_handler(finman.get_history_conv_handler)
+    # app.add_handler(finman.get_history_conv_handler) # report thay thế
     app.add_handler(finman.report_conv_handler)
+    app.add_handler(finman.add_budget_conv_handler)
 
     #MESSAGE
     # app.add_handler(MessageHandler(filters.TEXT, message_handler))
@@ -31,7 +32,7 @@ if __name__ == '__main__':
     app.add_error_handler(scheduler.error_handler)
 
     #Startup services
-    # scheduler.scheduler.SchedulerStart()
+    scheduler.scheduler.SchedulerStart()
 
     #Polls the bot
     print("Polling...")

@@ -49,6 +49,9 @@ class Category(Base):
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     category_name = Column(String(100), nullable=False)
     type = Column(Enum(CategoryType), nullable=False)
+    budget_id = Column(Integer, ForeignKey("budgets.budget_id"), nullable=True)
+
+    budget = relationship("Budget", back_populates="categories")
 
 class Expense(Base):
     __tablename__ = "expenses"
@@ -79,3 +82,17 @@ class Income(Base):
 
     category = relationship("Category", backref="incomes")
     wallet = relationship("Wallet", backref="incomes")
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    budget_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+
+    budget_name = Column(String(100), nullable=False)   # ví dụ: "Chi tiêu thiết yếu tháng 10"
+    balance = Column(DECIMAL(15, 2), nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    # Quan hệ
+    user = relationship("User", backref="budgets")
+    categories = relationship("Category", back_populates="budget")

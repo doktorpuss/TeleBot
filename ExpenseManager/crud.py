@@ -14,8 +14,13 @@ def add_expense(session, user_id, wallet_id, category_id, amount, expense_date, 
     if isinstance(expense_date, str):
         expense_date = datetime.datetime.strptime(expense_date, "%Y-%m-%d").date()
     
+    # Update wallet balance
     wallet = update_wallet_balance(session,wallet_id,amount,models.EXPENSE)
     if(wallet == None): return
+
+    # Update budget balance
+    budget_id = get_category_info(session, category_id).budget_id # get budget id from category
+    update_budget_balance(budget_id, session, amount, is_spending=True) 
     
     expense = models.Expense(
         user_id=user_id,
@@ -103,12 +108,16 @@ def list_incomes(session, user_id, month=None):
         })
     return incomes
 
-def list_categories(session, user_id = 1,type = None):
+def get_categories(session, user_id = 1,type = None):
     query = session.query(models.Category).filter(models.Category.user_id == user_id)
     if type:
         query = query.filter(models.Category.type == type)
     results = query.all()
     return results
+
+def get_category_info(session, category_id: int) -> models.Category | None:
+    category = session.query(models.Category).filter(models.Category.category_id == category_id).first()
+    return category
 
 def get_categories_list(session, user_id = 1, user_name = None ,type = None):
     
@@ -117,7 +126,7 @@ def get_categories_list(session, user_id = 1, user_name = None ,type = None):
         user_id = get_user_id(session,user_name)
     
     # Get Category query result
-    categories = list_categories(session,user_id,type)
+    categories = get_categories(session,user_id,type)
 
     # Extract category name to list
     category_list:list = []
@@ -144,6 +153,10 @@ def update_wallet_balance(session: Session, wallet_id: int, amount: float, type:
         wallet = session.query(models.Wallet).filter(models.Wallet.wallet_id == wallet_id).one()
     except NoResultFound:
         raise ValueError(f"Wallet with id {wallet_id} not found")
+
+    # 🔹 Ép kiểu amount sang Decimal để tránh lỗi cộng trừ
+    if isinstance(amount, float):
+        amount = Decimal(str(amount))
 
     if type == models.INCOME:
         wallet.balance += amount
@@ -181,6 +194,10 @@ def get_wallet_id(session, user_id: int, wallet_name: str) -> int | None:
     ).first()
     return wallet.wallet_id if wallet else None
 
+def get_wallet_info(session, wallet_id: str) -> models.Wallet | None:
+    wallet = session.query(models.Wallet).filter_by(wallet_id=wallet_id).first()
+    return wallet    
+
 def get_wallet_balance(session, wallet_id: int) -> float | None:
     wallet = session.query(models.Wallet).filter(models.Wallet.wallet_id == wallet_id).first()
     return float(wallet.balance) if wallet else None
@@ -203,8 +220,8 @@ def list_transactions(session, user_id, month=None):
     expenses = list_expenses(session, user_id, month)
     incomes = list_incomes(session, user_id, month)
 
-    print(expenses)
-    print(incomes)
+    # print(expenses)
+    # print(incomes)
 
     if not expenses and not incomes:
         return None
@@ -215,3 +232,39 @@ def list_transactions(session, user_id, month=None):
     for id in range(len(transactions)):
         transactions[id]["id"] = id
     return transactions
+
+def update_budget_balance(budget_id, session, amount, is_spending: bool):
+    try:
+        budget = session.query(models.Budget).filter(models.Budget.budget_id == budget_id).one()
+    except NoResultFound:
+        raise ValueError(f"Budget with id {budget_id} not found")
+    
+    # 🔹 Ép kiểu amount sang Decimal để tránh lỗi cộng trừ
+    if isinstance(amount, float):
+        amount = Decimal(str(amount))
+    
+    if is_spending:
+        budget.balance -= amount
+    else:
+        budget.balance += amount
+
+    session.commit()
+    session.refresh(budget)
+    return budget
+
+def get_budget_list(session, user_id):
+    budgets = session.query(models.Budget).filter(models.Budget.user_id == user_id).all()
+
+    list = []
+    for budget in budgets:
+        list.append({
+            "id": budget.budget_id,
+            "name": budget.budget_name,
+            "balance": budget.balance
+        })
+
+    return list
+
+def get_budget_info(session, budget_id: int) -> models.Budget | None:
+    budget = session.query(models.Budget).filter(models.Budget.budget_id == budget_id).first()
+    return budget

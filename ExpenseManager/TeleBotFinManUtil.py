@@ -131,8 +131,13 @@ async def ask_category_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Hôm nay", callback_data="today")],
                     [InlineKeyboardButton("Hôm qua", callback_data="day_before")],
                     [InlineKeyboardButton("Ngày khác", callback_data="other")]])
-
-    await query.edit_message_text(f"Đã chọn danh mục: {category}\nNgày giao dịch:",reply_markup=reply_markup)
+    
+    if transaction_info.type == models.CategoryType.expense:
+        budget_id = crud.get_category_info(session=session, category_id=category_id).budget_id
+        budget_info = crud.get_budget_info(session=session, budget_id=budget_id)
+        await query.message.reply_text(f"danh mục [{category}] \n{budget_info.budget_name}: {budget_info.balance:,.0f}\nNgày giao dịch:",reply_markup=reply_markup)
+    else:
+        await query.edit_message_text(f"danh mục [{category}] \nNgày giao dịch:",reply_markup=reply_markup)
     return ASK_DATE
 
 async def ask_date_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
@@ -155,7 +160,7 @@ async def ask_date_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     # Make inline keyboard from wallets by vertical list
     keyboard = []
     for wallet in wallets:
-        keyboard.append([InlineKeyboardButton(wallet.wallet_name, callback_data=wallet.wallet_name)])
+        keyboard.append([InlineKeyboardButton(f"{wallet.wallet_name}: {wallet.balance:,.0f} VND", callback_data=wallet.wallet_name)])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     # Send request
@@ -244,6 +249,12 @@ async def confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             note=transaction_info.note
         )
         await query.edit_message_text(f"✅ Đã thêm chi tiêu thành công")
+
+        # Report budget balance
+        budget_id = crud.get_category_info(session, transaction_info.category_id).budget_id # get budget id from category
+        budget_info = crud.get_budget_info(session=session, budget_id=budget_id)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"{budget_info.budget_name}: {budget_info.balance:,.0f}")
+
         print(Back.GREEN + f"Đã thêm chi tiêu với ID: {expense.expense_id}" + Style.RESET_ALL)
     else:
         # Add income to database
@@ -560,7 +571,7 @@ async def get_history_other_month(update: Update, context: ContextTypes.DEFAULT_
         return ConversationHandler.END
     dt = pd.DataFrame(transactions)
     table = make_history_table(dt)
-    print("Table created at:", table)
+    # print("Table created at:", table)
 
     await update.message.reply_photo(photo=open(table, "rb"))
 
@@ -686,6 +697,7 @@ async def report_this_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.message.reply_photo(
         photo=open(report_path, "rb")
     )
+    print(Fore.MAGENTA + f"REQUEST: Month report: {get_this_month()}" + Style.RESET_ALL)
     return ConversationHandler.END
 
 
@@ -738,6 +750,71 @@ report_conv_handler = ConversationHandler(
     states={
         REPORT_THIS_MONTH: [CallbackQueryHandler(report_this_month)],
         REPORT_OTHER_MONTH: [MessageHandler(filters.TEXT & ~filters.COMMAND, report_other_month)],
+    },
+    fallbacks=[CommandHandler("cancel", cancel_handler)],
+)
+
+# ======================= ADD BUDGET ========================
+
+ADD_BUDGET = "ADD_BUDGET"
+ASK_BUDGET_AMOUNT = "ASK_BUDGET_AMOUNT"
+
+budget_id = 0
+
+async def add_budget_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_name = update.message.from_user.name
+    print(Fore.LIGHTGREEN_EX + f"User: {user_name}" + Style.RESET_ALL)
+
+    # Get user id
+    user_id = crud.get_user_id(session, user_name)
+    user_id = 1 # For development
+
+    # Get budget list
+    budget_list = crud.get_budget_list(session,user_id)
+
+    # Create keyboard
+    keyboard = [[InlineKeyboardButton(text=f"{budget['name']}: {budget['balance']} VND", callback_data=budget['id'])] for budget in budget_list]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Hũ chi tiêu muốn bổ sung:", reply_markup=reply_markup)
+    return ASK_BUDGET_AMOUNT
+
+
+async def ask_budget_amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global budget_id
+    query = update.callback_query
+    await query.answer()
+    budget_id = int(query.data)
+    print(Fore.LIGHTGREEN_EX + f"budget_id: {budget_id}" + Style.RESET_ALL)
+
+    await query.message.reply_text("Bạn muốn bổ sung vào hũ bao nhiêu tiền ?")
+    return ADD_BUDGET
+
+async def add_budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global budget_id
+    budget_amount = float(update.message.text)
+    print(Fore.LIGHTGREEN_EX + f"budget_amount: {budget_amount}" + Style.RESET_ALL)
+
+    print(Fore.MAGENTA + f"Add budget requested: budget_id: {budget_id}, budget_amount: {budget_amount}" + Style.RESET_ALL)
+    # Add budget'
+    if budget_id != 0:
+        crud.update_budget_balance(budget_id=budget_id, session=session, amount=budget_amount, is_spending=False)
+
+        # Report budget balance
+        budget_info = crud.get_budget_info(session=session, budget_id=budget_id)
+        await update.message.reply_text(f"{budget_info.budget_name}: {budget_info.balance:,.0f}")
+        budget_id = 0
+    else:
+        await update.message.reply_text("Không tìm thấy hũ chi tiêu")
+
+    return ConversationHandler.END
+
+
+add_budget_conv_handler = ConversationHandler(
+    entry_points=[CommandHandler("add_budget", add_budget_entry)],
+    states={
+        ASK_BUDGET_AMOUNT: [CallbackQueryHandler(ask_budget_amount_handler)],
+        ADD_BUDGET: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_budget_handler)],
     },
     fallbacks=[CommandHandler("cancel", cancel_handler)],
 )
