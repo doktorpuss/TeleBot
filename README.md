@@ -33,7 +33,7 @@ sudo apt install sqlite3 wkhtmltopdf
 
 ### 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/<your-username>/TeleBot.git
+git clone https://github.com/doktorpuss/TeleBot.git
 cd TeleBot
 ```
 
@@ -131,7 +131,7 @@ python main.py
 ```
 
 The bot will connect to Telegram.  
-If Google Calendar integration is enabled, it will automatically authenticate on first run.
+If Google Calendar integration is enabled, you have to do some authentication process to google (need web browser with HTML presentable) in the first run.
 
 ---
 
@@ -192,4 +192,5 @@ This project is open-source and available under the **MIT License**.
 
 ## 💡 Tips
 * Keep your `CalendarCredential.json` and `secrete.py` files private.  
-* You can duplicate your `expense.db` as a clean **template database** for future use.
+* You can duplicate your `expense.db` as a clean **template database** for future use. See "sqlite3 .schema" & "sqlite3 .dump" instructions
+   
