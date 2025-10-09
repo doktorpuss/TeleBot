@@ -274,6 +274,7 @@ async def confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("CANCELED")
+    print("CANCELED")
     return ConversationHandler.END
 
 add_income_conv_handler = ConversationHandler(

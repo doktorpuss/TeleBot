@@ -444,6 +444,7 @@ async def ask_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
 async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("CANCELED")
+    print("CANCELED")
     return ConversationHandler.END
 
 async def create_event_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
