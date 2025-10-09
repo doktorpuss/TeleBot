@@ -698,11 +698,11 @@ async def report_this_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
     report_path = make_monthly_report(month, user)
 
     if "User not found" in report_path:
-        await update.message.reply_text("⚠️ Không tìm thấy người dùng.")
+        await update.callback_query.message.reply_text("⚠️ Không tìm thấy người dùng.")
         return ConversationHandler.END
 
     if "No transaction found" in report_path:
-        await update.message.reply_text("Không có giao dịch trong thời gian truy vấn")
+        await update.callback_query.message.reply_text("Không có giao dịch trong thời gian truy vấn")
         return ConversationHandler.END
 
     await update.callback_query.message.reply_photo(
