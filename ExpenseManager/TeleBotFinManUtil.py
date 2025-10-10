@@ -383,7 +383,7 @@ def make_type_pie_chart(history: pd.DataFrame, type_name: str):
     pie_url = f"{PIE_CHART_SAVE_DIRECTORY}/pie_type_{get_this_month()}.png"
     expense = history[history["type"] == type_name]
 
-    if not expense:
+    if expense.empty:
         return None
 
     return make_pie_chart(expense, "category", "amount", pie_url, f"Cơ cấu chi tiêu theo loại: {type_name}")
