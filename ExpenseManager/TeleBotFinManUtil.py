@@ -591,12 +591,9 @@ def make_history_table(history: pd.DataFrame):
     body {{
         background: #ffffff;
         margin: 0;
-        width: fit-content;
-        height: fit-content;
         display: flex;
         justify-content: center;
         padding: 40px 0;
-        overflow: visible;
     }}
     .container {{
         background: white;
@@ -634,7 +631,7 @@ def make_history_table(history: pd.DataFrame):
     }
 
     save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
-    hti = Html2Image(output_path=HISTORY_TABLE_DIRECTORY)
+    hti = Html2Image(output_path=HISTORY_TABLE_DIRECTORY,size=[1200,0])
     hti.screenshot(html_str=html_full, save_as=os.path.basename(save_path))
     return save_path
 
