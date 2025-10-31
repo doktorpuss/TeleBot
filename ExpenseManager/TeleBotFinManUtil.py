@@ -582,43 +582,58 @@ def make_history_table(history: pd.DataFrame):
     # HTML — bảng căn giữa ngang, co giãn dọc
     # --------------------------
     html_full = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-    <meta charset="UTF-8">
-    <title>Sample Dataset</title>
-    <style>
-    body {{
-        background: #ffffff;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        padding: 40px 0;
-    }}
-    .container {{
-        background: white;
-        padding: 20px 40px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        border-radius: 12px;
-        text-align: center;
-    }}
-    h2 {{
-        font-family: Arial, sans-serif;
-        color: #2f5597;
-        border-bottom: 2px solid #2f5597;
-        display: inline-block;
-        padding-bottom: 4px;
-        margin-bottom: 10px;
-    }}
-    </style>
-    </head>
-    <body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Báo cáo chi tiêu</title>
+<style>
+html, body {{
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+}}
+body {{
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 0;
+}}
+.wrapper {{
+    display: inline-block;
+    text-align: center;
+}}
+.container {{
+    background: white;
+    padding: 20px 40px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    text-align: center;
+    display: inline-block;
+}}
+h2 {{
+    font-family: Arial, sans-serif;
+    color: #2f5597;
+    border-bottom: 2px solid #2f5597;
+    display: inline-block;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+}}
+table {{
+    margin: 0 auto;
+}}
+</style>
+</head>
+<body>
+<div class="wrapper">
     <div class="container">
         {html_table}
     </div>
-    </body>
-    </html>
-    """
+</div>
+</body>
+</html>
+"""
+
 
     # --------------------------
     # Xuất ảnh (không đặt height)
@@ -632,7 +647,7 @@ def make_history_table(history: pd.DataFrame):
 
     save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
     hti = Html2Image(output_path=HISTORY_TABLE_DIRECTORY)
-    hti.screenshot(html_str=f"<script>window.resizeTo(document.body.scrollWidth, document.body.scrollHeight);</script>{html_full}", save_as=os.path.basename(save_path))
+    hti.screenshot(html_str=html_full, save_as=os.path.basename(save_path))
     return save_path
 
 # Conversation states
