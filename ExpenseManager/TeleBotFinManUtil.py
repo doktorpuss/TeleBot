@@ -591,9 +591,12 @@ def make_history_table(history: pd.DataFrame):
     body {{
         background: #ffffff;
         margin: 0;
+        width: fit-content;
+        height: fit-content;
         display: flex;
         justify-content: center;
         padding: 40px 0;
+        overflow: visible;
     }}
     .container {{
         background: white;
