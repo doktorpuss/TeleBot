@@ -11,20 +11,28 @@ if __name__ == '__main__':
     #COMMAND
     # app.add_handler(CommandHandler('start',scheduler.start_handler))
     # app.add_handler(CommandHandler('end',scheduler.end_handler))
-    # app.add_handler(CommandHandler('event',scheduler.get_event_handler))
+    app.add_handler(CommandHandler('event',scheduler.get_event_handler))
     app.add_handler(CommandHandler('today',scheduler.CMD_today_handler))
     app.add_handler(CommandHandler('week',scheduler.CMD_week_handler))
     app.add_handler(CommandHandler('month',scheduler.CMD_month_handler))
-
+    app.add_handler(CommandHandler('register',finman.registration)) # command : /register
+    app.add_handler(CommandHandler('update_registration_mode',finman.registration_allow_update)) # command : /update_registration_mode
+    app.add_handler(CommandHandler('budget_info',finman.ask_budget_balance_handler)) # command : /budget_info
+    app.add_handler(CommandHandler('wallet_info',finman.ask_wallet_balance_handler)) # command : /wallet_info
+    app.add_handler(CommandHandler('wishlist_info',finman.ask_wishlist_handler)) # command : /wishlist_info
+    
     # #CONVERSATION
     app.add_handler(scheduler.creat_event_conv_handler) # command : /create_event
     app.add_handler(scheduler.get_event_conv_handler) # command : /event
-    app.add_handler(finman.add_income_conv_handler) # command : /add_income
-    app.add_handler(finman.add_expense_conv_handler) # command : /add_expense
-    # app.add_handler(finman.get_history_conv_handler) # report thay thế
+    app.add_handler(finman.add_transaction_conv_handler) # command : /add_income
     app.add_handler(finman.report_conv_handler) #command : /report
     app.add_handler(finman.add_budget_conv_handler) # command : /add_budget
-
+    app.add_handler(finman.create_budget_conv_handler) # command : /create_budget
+    app.add_handler(finman.create_wallet_conv_handler) # command : /create_wallet
+    app.add_handler(finman.create_category_conv_handler) # command : /create_category
+    app.add_handler(finman.add_wishlist_conv_handler) # command : /create_wishlist
+    app.add_handler(finman.execute_wishlist_conv_handler) # command : /execute_wishlist
+    
     #MESSAGE
     # app.add_handler(MessageHandler(filters.TEXT, message_handler))
 

@@ -1141,6 +1141,7 @@ create_category_conv_handler = ConversationHandler(
 # ================== ADD WISHLIST CONVERSATION ===================
 ASK_NEW_WISHLIST_NAME = "ASK_NEW_WISHLIST_NAME"
 ASK_NEW_WISHLIST_COST = "ASK_NEW_WISHLIST_COST"
+ASK_NEW_WISHLIST_CATEGORY = "ASK_NEW_WISHLIST_CATEGORY"
 ASK_NEW_WISHLIST_CONFIRM = "ASK_NEW_WISHLIST_CONFIRM"
 
 async def ask_add_wishlist_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1149,8 +1150,9 @@ async def ask_add_wishlist_start_handler(update: Update, context: ContextTypes.D
     context.user_data['wishlist'] = {
         'name': None,
         'cost': None,
-        'user_id' : crud.get_user_info(session=session,user_tele_id=update.message.from_user.id)[0].user_id 
-    }
+        }
+    context.user_data['user_id'] = crud.get_user_info(session=session,user_tele_id=update.message.from_user.id)[0].user_id
+    context.user_data['conversation_context'] = "add_wishlist"
 
     return ASK_NEW_WISHLIST_NAME
 
@@ -1164,14 +1166,33 @@ async def ask_new_wishlist_cost_handler(update: Update, context: ContextTypes.DE
     wishlist_cost = float(update.message.text)
     context.user_data['wishlist']['cost'] = wishlist_cost
 
+    user_id = context.user_data['user_id']
+    categories = crud.get_category_info(user_id=user_id)
+
+    keyboard = [[InlineKeyboardButton(text = f"{category.category_name}", callback_data=f"{category.category_id}|{category.category_name}")] for category in categories]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text("Chọn danh mục:\n", reply_markup=reply_markup)
+
+    return ASK_NEW_WISHLIST_CATEGORY
+
+async def ask_new_wishlist_category_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+
+    context.user_data['category'] = {
+        'id': int(update.callback_query.data.split("|")[0]),
+        'name': update.callback_query.data.split("|")[1],
+    }
+
     reply_markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("✅", callback_data="confirm")],
         [InlineKeyboardButton("❌", callback_data="cancel")]
     ])
 
-    await update.message.reply_text("Xác nhận kế hoạch chi tiêu:\n"
+    await update.callback_query.message.reply_text("Xác nhận kế hoạch chi tiêu:\n"
         + "Tên: " + context.user_data['wishlist']['name'] + "\n"
-        + "Chi phí: " + str(context.user_data['wishlist']['cost']) + str(currency),
+        + "Chi phí: " + str(context.user_data['wishlist']['cost']) + str(currency) + "\n"
+        + "Danh mục: " + context.user_data['category']['name'],
         reply_markup=reply_markup
     )
 
@@ -1182,9 +1203,16 @@ async def ask_new_wishlist_confirm_handler(update: Update, context: ContextTypes
 
     wishlist_name = context.user_data['wishlist']['name']
     wishlist_cost = context.user_data['wishlist']['cost']
-    user_id = context.user_data['wishlist']['user_id']
+    user_id = context.user_data['user_id']
+    category_id = context.user_data['category']['id']
 
-    new_wishlist = crud.add_wishlist(wishlist_name=wishlist_name, user_id=user_id, cost=wishlist_cost)
+    new_wishlist = crud.add_wishlist(
+        wishlist_name=wishlist_name, 
+        user_id=user_id, 
+        cost=wishlist_cost, 
+        category_id=category_id
+        )
+    
     if not new_wishlist:
         await update.callback_query.message.reply_text("❌ Tạo chi tiêu không thành công")
         return ConversationHandler.END
@@ -1198,57 +1226,41 @@ add_wishlist_conv_handler = ConversationHandler(
     states={
         ASK_NEW_WISHLIST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_new_wishlist_name_handler)],
         ASK_NEW_WISHLIST_COST: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_new_wishlist_cost_handler)],
+        ASK_NEW_WISHLIST_CATEGORY: [CallbackQueryHandler(ask_new_wishlist_category_handler)],
         ASK_NEW_WISHLIST_CONFIRM: [CallbackQueryHandler(ask_new_wishlist_confirm_handler)],
-    },
+        },
     fallbacks=[CommandHandler("cancel", cancel_handler)],
 )
 
-# ====================== WISHLIST INFO REQUEST ======================
-
-import pandas as pd
-
-def format_wishlist_table(wishlists, currency="₫"):
-    # Tạo DataFrame từ danh sách ORM object
-    df = pd.DataFrame([{
-        "Kế hoạch": w.wish_name,
-        "Chi phí": f"{w.cost:,.0f} {currency}"
-    } for w in wishlists])
-
-    # Xuất ra dạng bảng văn bản đẹp
-    return df
-
+# ====================== REQUEST WISHLIST INFO ======================
 
 async def ask_wishlist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = crud.get_user_info(session=session, user_tele_id=update.message.from_user.id)[0]
-    wishlists = crud.get_wishlist(user_id=user.user_id)
-
-    keyboard = []
-    for wishlist in wishlists:
-        keyboard.append([
-            InlineKeyboardButton(text=f"{wishlist.wish_name}", callback_data=f"wish_{wishlist.wish_id}"),
-            InlineKeyboardButton(text=f"{wishlist.cost:,.0f} {currency}", callback_data=f"cost_{wishlist.wish_id}")
-        ])
+    user_id=crud.get_user_info(session=session,user_tele_id=update.message.from_user.id)
+    wishlists = crud.get_wishlist(user_id=user_id)
 
     total_cost = sum([wishlist.cost for wishlist in wishlists])
-    keyboard.append([
-        InlineKeyboardButton(text=f"💰 Tổng: {total_cost:,.0f} {currency}", callback_data="total")
-    ])
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    msg = "Danh sách dự chi:\n"
 
-    # Gửi dưới dạng code block để hiển thị đẹp
-    await update.message.reply_text(f"📋 Danh sách dự chi:",reply_markup=reply_markup)
-    return ConversationHandler.END
+    for wishlist in wishlists:
+        msg += f"[{wishlist.category.category_name}]{wishlist.wish_name}: {wishlist.cost:,.0f} {currency}\n"
+
+    msg += f"Tổng chi: {total_cost:,.0f} {currency}"
+
+    await update.message.reply_text(msg)
+
 
 # ====================== WISHLIST EXECUTE CONVERSATION ======================
 ASK_EXECUTE_WISHLIST_ID = "ASK_EXECUTE_WISHLIST"
+ASK_EXECUTE_WISHLIST_PURCHASE_WALLET = "ASK_EXECUTE_WISHLIST_PURCHASE_WALLET"
+ASK_EXECUTE_WISHLIST_PURCHASE_BUDGET = "ASK_EXECUTE_WISHLIST_PURCHASE_BUDGET"
 ASK_EXECUTE_WISHLIST_CONFIRMATION = "ASK_EXECUTE_WISHLIST_CONFIRMATION"
 
 async def ask_execute_wishlist_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id=crud.get_user_info(session=session,user_tele_id=update.message.from_user.id)[0].user_id
+    user_id=crud.get_user_info(session=session,user_tele_id=update.message.from_user.id)
     wishlists = crud.get_wishlist(user_id=user_id)
 
-    keyboard = [[InlineKeyboardButton(text = f"{wishlist.wish_name}: {wishlist.cost:,.0f} {currency}", callback_data=str(wishlist.wish_id))] for wishlist in wishlists]
+    keyboard = [[InlineKeyboardButton(text = f"{wishlist.wish_name}: {wishlist.cost:,.0f} {currency}", callback_data=str(wishlist.wishlist_id))] for wishlist in wishlists]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text("Hãy chọn chi tiêu muốn giải ngân:\n", reply_markup=reply_markup)
@@ -1262,12 +1274,71 @@ async def ask_execute_wishlist_id_handler(update: Update, context: ContextTypes.
     await update.callback_query.answer()
 
     context.user_data['wishlist_id'] = update.callback_query.data
+    context.user_data['category_id'] = crud.get_wishlist(wishlist_id=context.user_data['wishlist_id'])[0].category_id
+    context.user_data['category_name'] = crud.get_category(category_id=context.user_data['category_id'])[0].category_name
+    context.user_data['content'] = crud.get_wishlist(wishlist_id=context.user_data['wishlist_id'])[0].wish_name
+    context.user_data['amount'] = crud.get_wishlist(wishlist_id=context.user_data['wishlist_id'])[0].cost
+    context.user_data['type'] = models.EXPENSE
+
+    wallets = crud.get_wallet_info(user_id=context.user_data['user_id'])
+
+    reply_markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton(text = f"{wallet.wallet_name}: {wallet.balance:,.0f} {currency}", callback_data=f"{wallet.wallet_id}|{wallet.wallet_name}|{wallet.wallet_balance}")] for wallet in wallets    
+    ])
+    await update.callback_query.reply_text(
+        "Hãy chọn ví giao dịch:",
+        reply_markup=reply_markup
+    )
+    return ASK_EXECUTE_WISHLIST_PURCHASE_WALLET
+
+async def ask_execute_wishlist_wallet_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+
+    context.user_data['wallet'] = {
+        'id':update.callback_query.data.split("|")[0],
+        'name':update.callback_query.data.split("|")[1],
+        'balance':update.callback_query.data.split("|")[2]
+    }
+
+    budgets = crud.get_budget_info(user_id=context.user_data['user_id'])
+
+    reply_markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton(text = f"{budget.budget_name}: {budget.balance:,.0f} {currency}", callback_data=f"{budget.budget_id}|{budget.budget_name}|{budget.balance}")] for budget in budgets    
+    ])
+    await update.callback_query.reply_text(
+        "Hãy chọn hũ chi tiêu:",
+        reply_markup=reply_markup
+    )
+    return ASK_EXECUTE_WISHLIST_PURCHASE_BUDGET
+
+async def ask_execute_wishlist_budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+
+    context.user_data['budget'] = {
+        'id':update.callback_query.data.split("|")[0],
+        'name':update.callback_query.data.split("|")[1],
+        'balance':update.callback_query.data.split("|")[2]
+    }
+    
+        # Confirm info
+    confirm_text = f"""Xác nhận thông tin giao dịch:
+Số tiền: {context.user_data['amount']} 
+Danh mục: {context.user_data['category_name']} 
+Ngày nhận: {get_created_date()}
+Ví giao dịch: {context.user_data['wallet']['name']} 
+Hũ chi tiêu: {context.user_data['budget']['name']}
+Ghi chú: {context.user_data['content']}
+
+Số dư sau giao dịch: 
+{context.user_data['budget']['name']}: {(float(context.user_data['budget']['balance']) - context.user_data['amount']):,.0f} {currency}
+{context.user_data['wallet']['name']}: {(float(context.user_data['wallet']['balance']) - context.user_data['amount']):,.0f} {currency}
+    """
 
     reply_markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("✅", callback_data="confirm")],
         [InlineKeyboardButton("❌", callback_data="cancel")]
     ])
-    await update.callback_query.message.reply_text("Xác nhận giải ngân", reply_markup=reply_markup)
+    await update.message.reply_text(confirm_text, reply_markup=reply_markup)
 
     return ASK_EXECUTE_WISHLIST_CONFIRMATION
 
@@ -1278,6 +1349,17 @@ async def ask_execute_wishlist_confirmation_handler(update: Update, context: Con
         await update.callback_query.message.reply_text("Đã hủy giải ngân")
         context.user_data.clear()
         return ConversationHandler.END
+    
+    crud.add_transaction(
+        user_id=context.user_data['user_id'],
+        wallet_id=context.user_data['wallet']['id'],
+        budget_id=context.user_data['budget']['id'],
+        category_id=context.user_data['category_id'],
+        type=context.user_data['type'],
+        amount=context.user_data['amount'],
+        content=context.user_data['content'],
+        date=get_created_date()
+    )
 
     crud.execute_wishlist(
         wishlist_id=context.user_data['wishlist_id']
@@ -1290,7 +1372,8 @@ async def ask_execute_wishlist_confirmation_handler(update: Update, context: Con
 execute_wishlist_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("execute_wishlist", ask_execute_wishlist_start_handler)],
     states={
-        ASK_EXECUTE_WISHLIST_ID: [CallbackQueryHandler(ask_execute_wishlist_id_handler)],
+        ASK_EXECUTE_WISHLIST_PURCHASE_WALLET: [CallbackQueryHandler(ask_execute_wishlist_wallet_handler)],
+        ASK_EXECUTE_WISHLIST_PURCHASE_BUDGET: [CallbackQueryHandler(ask_execute_wishlist_budget_handler)],
         ASK_EXECUTE_WISHLIST_CONFIRMATION: [CallbackQueryHandler(ask_execute_wishlist_confirmation_handler)],
     },
     fallbacks=[CommandHandler("cancel", cancel_handler)],

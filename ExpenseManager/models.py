@@ -4,34 +4,18 @@ from sqlalchemy.orm import relationship
 from ExpenseManager.db import Base
 import enum
 
-'''
-1|1|Ăn uống|expense
-2|1|Đi lại|expense
-3|1|Nhà ở|expense
-4|1|Giải trí|expense
-5|1|Mua sắm|expense
-6|1|Sức khỏe|expense
-7|1|Giáo dục|expense
-8|1|Khác|expense
-9|1|Lương|income
-10|1|Thưởng|income
-11|1|Đầu tư|income
-12|1|Kinh doanh|income
-13|1|Khác|income
-'''
-
-EXPENSE = "expense"
-INCOME = "income"
+EXPENSE = "Expense"
+INCOME = "Income"
 
 class CategoryType(enum.Enum):
-    expense = "expense"
-    income = "income"
+    expense = "Expense"
+    income = "Income"
 
 class User(Base):
     __tablename__ = "users"
     user_id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    user_tele_id = Column(String(255), nullable=False)
     email = Column(String(100))
     created_at = Column(TIMESTAMP, server_default=func.now())
 
@@ -49,39 +33,21 @@ class Category(Base):
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     category_name = Column(String(100), nullable=False)
     type = Column(Enum(CategoryType), nullable=False)
-    budget_id = Column(Integer, ForeignKey("budgets.budget_id"), nullable=True)
 
-    budget = relationship("Budget", back_populates="categories")
-
-class Expense(Base):
-    __tablename__ = "expenses"
-    expense_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-    wallet_id = Column(Integer, ForeignKey("wallets.wallet_id"), nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
+class Transaction(Base):
+    __tablename__ = "transactions"
+    transaction_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id",ondelete="CASCADE"), nullable=False)
+    wallet_id = Column(Integer, ForeignKey("wallets.wallet_id",ondelete="CASCADE"), nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.category_id",ondelete="CASCADE"), nullable=False)
     amount = Column(DECIMAL(15,2), nullable=False)
     wallet_balance = Column(DECIMAL(15,2), nullable=False)
-    expense_date = Column(Date, nullable=False)
+    transaction_date = Column(Date, nullable=False)
     note = Column(Text)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    category = relationship("Category", backref="expenses")
-    wallet = relationship("Wallet", backref="expenses")
-
-class Income(Base):
-    __tablename__ = "incomes"
-    income_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-    wallet_id = Column(Integer, ForeignKey("wallets.wallet_id"), nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
-    amount = Column(DECIMAL(15,2), nullable=False)
-    wallet_balance = Column(DECIMAL(15,2), nullable=False)
-    income_date = Column(Date, nullable=False)
-    note = Column(Text)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-    category = relationship("Category", backref="incomes")
-    wallet = relationship("Wallet", backref="incomes")
+    category = relationship("Category", backref="transactions")
+    wallet = relationship("Wallet", backref="transactions")
 
 class Budget(Base):
     __tablename__ = "budgets"
@@ -95,4 +61,16 @@ class Budget(Base):
 
     # Quan hệ
     user = relationship("User", backref="budgets")
-    categories = relationship("Category", back_populates="budget")
+
+class WishList(Base):
+    __tablename__ = "wishlists"
+
+    wish_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+
+    wish_name = Column(String(100), nullable=False)
+    cost = Column(DECIMAL(15, 2), nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    # Quan hệ
+    user = relationship("User", backref="wishlists")

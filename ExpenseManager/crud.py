@@ -3,130 +3,109 @@ from sqlalchemy.orm import joinedload,Session
 from sqlalchemy.exc import NoResultFound
 from ExpenseManager import models
 from decimal import Decimal
+from colorama import Fore,Back,Style
 import datetime
 
-def add_expense(session, user_id, wallet_id, category_id, amount, expense_date, note=None):
+session = get_session()
+# TRANSACTION
+# region 
+def add_transaction(session, user_id, wallet_id, category_id, amount,transaction_date, type, note=None):
     # Nếu amount là float thì convert sang Decimal
     if isinstance(amount, float):
         amount = Decimal(str(amount))  # tránh mất chính xác
 
     # Nếu truyền string thì tự convert sang datetime.date
-    if isinstance(expense_date, str):
-        expense_date = datetime.datetime.strptime(expense_date, "%Y-%m-%d").date()
-    
-    # Update wallet balance
-    wallet = update_wallet_balance(session,wallet_id,amount,models.EXPENSE)
-    if(wallet == None): return
+    if isinstance(transaction_date, str):
+        transaction_date = datetime.datetime.strptime(transaction_date, "%Y-%m-%d").date()
 
-    # Update budget balance
-    budget_id = get_category_info(session, category_id).budget_id # get budget id from category
-    update_budget_balance(budget_id, session, amount, is_spending=True) 
+    wallet = update_wallet_balance(session,wallet_id,amount,type)
+    if(wallet == None): return
     
-    expense = models.Expense(
+    transaction = models.Transaction(
         user_id=user_id,
         wallet_id=wallet_id,
         category_id=category_id,
         amount=amount,
         wallet_balance=wallet.balance, 
-        expense_date=expense_date,
+        transaction_date=transaction_date,
         note=note,
     )
-    session.add(expense)
+    session.add(transaction)
     session.commit()
-    session.refresh(expense)
-    return expense
+    session.refresh(transaction)
+    return transaction
 
-def list_expenses(session, user_id, month=None):
-    query = session.query(models.Expense).filter(models.Expense.user_id == user_id)
+def list_transactions(session, user_id, month=None):
+    query = session.query(models.Transaction).filter(models.Transaction.user_id == user_id)
     if month:
-        query = query.filter(models.Expense.expense_date.like(f"{month}-%"))  # month="2025-09"
+        query = query.filter(models.Transaction.transaction_date.like(f"{month}-%"))
     results = query.options(
-        joinedload(models.Expense.wallet),
-        joinedload(models.Expense.category)
+        joinedload(models.Transaction.wallet),
+        joinedload(models.Transaction.category)
     ).all()
 
-    expenses = []
-    for e in results:
-        expenses.append({
-            "id": e.expense_id,
-            "type": "expense",
-            "amount": e.amount,
-            "date": e.expense_date,
-            "note": e.note,
-            "category": e.category.category_name if e.category else None,
-            "wallet": e.wallet.wallet_name if e.wallet else None,
-            "wallet_balance": e.wallet_balance
-        })
-    return expenses
-
-def add_income(session, user_id, wallet_id, category_id, amount, income_date, note=None):
-    # Nếu amount là float thì convert sang Decimal
-    if isinstance(amount, float):
-        amount = Decimal(str(amount))  # tránh mất chính xác
-
-    # Nếu truyền string thì tự convert sang datetime.date
-    if isinstance(income_date, str):
-        income_date = datetime.datetime.strptime(income_date, "%Y-%m-%d").date()
-
-    wallet = update_wallet_balance(session,wallet_id,amount,models.INCOME)
-    if(wallet == None): return
-    
-    income = models.Income(
-        user_id=user_id,
-        wallet_id=wallet_id,
-        category_id=category_id,
-        amount=amount,
-        wallet_balance=wallet.balance, 
-        income_date=income_date,
-        note=note,
-    )
-    session.add(income)
-    session.commit()
-    session.refresh(income)
-    return income
-
-def list_incomes(session, user_id, month=None):
-    query = session.query(models.Income).filter(models.Income.user_id == user_id)
-    if month:
-        query = query.filter(models.Income.income_date.like(f"{month}-%"))
-    results = query.options(
-        joinedload(models.Income.wallet),
-        joinedload(models.Income.category)
-    ).all()
-
-    incomes = []
+    transactions = []
     for i in results:
-        incomes.append({
-            "id": i.income_id,
-            "type": "income",
+        transactions.append({
+            "id": i.transaction_id,
+            "type": i.category.type if i.category else "Missing",
             "amount": i.amount,
-            "date": i.income_date,
+            "date": i.transaction_date,
             "note": i.note,
-            "category": i.category.category_name if i.category else None,
-            "wallet": i.wallet.wallet_name if i.wallet else None,
+            "category": i.category.category_name if i.category else "Missing",
+            "wallet": i.wallet.wallet_name if i.wallet else "Missing",
             "wallet_balance": i.wallet_balance
         })
-    return incomes
+    return transactions
+#endregion
 
-def get_categories(session, user_id = 1,type = None):
-    query = session.query(models.Category).filter(models.Category.user_id == user_id)
-    if type:
-        query = query.filter(models.Category.type == type)
-    results = query.all()
-    return results
+# USER
+# region
+def get_user_id(session: Session, user_name: str) -> int | None:
+    """Truy xuất user_id từ username"""
+    user = session.query(models.User).filter_by(username=user_name).first()
+    return user.user_id if user else None
 
-def get_category_info(session, category_id: int) -> models.Category | None:
-    category = session.query(models.Category).filter(models.Category.category_id == category_id).first()
-    return category
+def get_user_info(session: Session = session, user_id: int = None, user_name: str = None, user_tele_id = None) -> models.User | None:
+    query = session.query(models.User)
+    filters = []
 
-def get_categories_list(session, user_id = 1, user_name = None ,type = None):
-    
-    # If user_name not None then find id match usser_name
-    if user_name:
-        user_id = get_user_id(session,user_name)
-    
+    if user_id is not None:
+        filters.append(models.User.user_id == user_id)
+    if user_name is not None:
+        filters.append(models.User.username == user_name)
+    if user_tele_id is not None:
+        filters.append(models.User.user_tele_id == user_tele_id)
+
+    if not filters:
+        return None  # không có tiêu chí nào -> không query
+
+    users = query.filter(*filters).all()
+    return users
+
+def add_user(session: Session, user_name: str, user_tele_id: str, email: str = None) -> models.User:
+
+    user = models.User(
+        username=user_name,
+        user_tele_id=user_tele_id,
+        email = email,
+    )
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+# endregion
+
+# CATEGORY
+# region 
+def get_categories_list(session = session, user_id = None, type = None):
     # Get Category query result
-    categories = get_categories(session,user_id,type)
+    categories = get_category_info(user_id = user_id, type = type)
+
+    if not categories:
+        return "No category found"
 
     # Extract category name to list
     category_list:list = []
@@ -135,20 +114,60 @@ def get_categories_list(session, user_id = 1, user_name = None ,type = None):
 
     return category_list
 
+def get_category_info(
+    session = session,
+    category_id: int = None,
+    user_id: int = None,
+    category_name: str = None,
+    type: models.CategoryType = None
+) -> list[models.Category] | None:
 
+    query = session.query(models.Category)
+    filters = []
+
+    if category_id is not None:
+        filters.append(models.Category.category_id == category_id)
+    if user_id is not None:
+        filters.append(models.Category.user_id == user_id)
+    if category_name is not None:
+        filters.append(models.Category.category_name == category_name)
+    if type is not None:
+        filters.append(models.Category.type == type)
+
+    if not filters:
+        return None  # không có tiêu chí nào -> không query
+
+    categories = query.filter(*filters).all()
+    return categories
+
+def add_new_category(session = session, user_id: int = None, category_name: str = None, type: models.CategoryType = None) -> models.Category:
+    
+    if not user_id:
+        print(Fore.RED + "Create new category failed: User id not provided" + Style.RESET_ALL)
+        raise ValueError("Không xác định được người dùng")
+    if not category_name:
+        print(Fore.RED + "Create new category failed: Category name not provided" + Style.RESET_ALL)
+        raise ValueError("Tên danh mục không hợp lệ")
+    if not type:
+        print(Fore.RED + "Create new category failed: Category type not provided" + Style.RESET_ALL)
+        raise ValueError("Không xác định loại danh mục")
+    
+    category = models.Category(
+        user_id=user_id,
+        category_name=category_name,
+        type=type
+    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+# endregion
+
+# WALLET
+# region
 def update_wallet_balance(session: Session, wallet_id: int, amount: float, type:models.CategoryType) -> models.Wallet:
-    """
-    Cập nhật balance của ví.
-
-    Args:
-        session (Session): SQLAlchemy session.
-        wallet_id (int): ID của ví cần cập nhật.
-        amount (float): Số tiền thay đổi.
-        is_income (bool): Nếu True thì cộng vào balance, nếu False thì trừ đi.
-
-    Returns:
-        Wallet: Object Wallet sau khi được update.
-    """
+   
     try:
         wallet = session.query(models.Wallet).filter(models.Wallet.wallet_id == wallet_id).one()
     except NoResultFound:
@@ -170,70 +189,45 @@ def update_wallet_balance(session: Session, wallet_id: int, amount: float, type:
     session.refresh(wallet)  # refresh lại để lấy dữ liệu mới
     return wallet
 
-def get_user_id(session: Session, user_name: str) -> int | None:
-    """Truy xuất user_id từ username"""
-    user = session.query(models.User).filter_by(username=user_name).first()
-    return user.user_id if user else None
+def get_wallet_info(session = session, wallet_id: int = None, user_id: int =None) -> models.Wallet | None:
+    query = session.query(models.Wallet)
+    filters = []
 
-def get_category_id(session, user_name, category_name):
-    user = session.query(models.User).filter_by(username=user_name).first()
-    category = session.query(models.Category).filter_by(
-        user_id=user.user_id,
-        category_name=category_name
-    ).first()
-    return category.category_id if category else None
+    if wallet_id is not None:
+        filters.append(models.Wallet.wallet_id == wallet_id)
+    if user_id is not None: 
+        filters.append(models.Wallet.user_id == user_id)
 
-def get_wallet_name(session, wallet_id: int) -> str | None:
-    wallet = session.query(models.Wallet).filter(models.Wallet.wallet_id == wallet_id).first()
-    return wallet.wallet_name if wallet else None
+    if not filters:
+        return None  # không có tiêu chí nào -> không query
 
-def get_wallet_id(session, user_id: int, wallet_name: str) -> int | None:
-    wallet = session.query(models.Wallet).filter_by(
-        user_id=user_id,
-        wallet_name=wallet_name
-    ).first()
-    return wallet.wallet_id if wallet else None
+    wallets = query.filter(*filters).all()
+    return wallets
 
-def get_wallet_info(session, wallet_id: str) -> models.Wallet | None:
-    wallet = session.query(models.Wallet).filter_by(wallet_id=wallet_id).first()
-    return wallet    
+def add_new_wallet(session = session, user_id = None, wallet_name = None):
 
-def get_wallet_balance(session, wallet_id: int) -> float | None:
-    wallet = session.query(models.Wallet).filter(models.Wallet.wallet_id == wallet_id).first()
-    return float(wallet.balance) if wallet else None
-
-def list_wallets(session, user_id = 1):
-    query = session.query(models.Wallet).filter(models.Wallet.user_id == user_id)
-    results = query.all()
-
-    wallet_list = []
-    for wallet in results:
-        wallet_list.append({
-            "id": wallet.wallet_id,
-            "name": wallet.wallet_name,
-            "balance": wallet.balance
-        })
-    return results
-
-
-def list_transactions(session, user_id, month=None):
-    expenses = list_expenses(session, user_id, month)
-    incomes = list_incomes(session, user_id, month)
-
-    # print(expenses)
-    # print(incomes)
-
-    if not expenses and not incomes:
+    if not user_id:
+        print(Fore.RED + "Create new wallet failed: User id not provided" + Style.RESET_ALL)
         return None
-    
-    transactions = expenses + incomes
-    transactions.sort(key=lambda x: x["date"])
 
-    for id in range(len(transactions)):
-        transactions[id]["id"] = id
-    return transactions
+    if not wallet_name:
+        print(Fore.RED + "Create new wallet failed: Wallet name not provided" + Style.RESET_ALL)
+        return None
 
-def update_budget_balance(budget_id, session, amount, is_spending: bool):
+    wallet = models.Wallet(
+        user_id = user_id,
+        wallet_name = wallet_name,
+        balance = 0
+    )
+    session.add(wallet)
+    session.commit()
+    session.refresh(wallet)
+    return wallet
+# endregion
+
+# BUDGET
+# region
+def update_budget_balance(budget_id = None, session = session, amount = None, is_spending: bool = False):
     try:
         budget = session.query(models.Budget).filter(models.Budget.budget_id == budget_id).one()
     except NoResultFound:
@@ -252,19 +246,69 @@ def update_budget_balance(budget_id, session, amount, is_spending: bool):
     session.refresh(budget)
     return budget
 
-def get_budget_list(session, user_id):
-    budgets = session.query(models.Budget).filter(models.Budget.user_id == user_id).all()
+def get_budget_info(session = session, budget_id: int = None, user_id: int = None) -> models.Budget | None:
+    if budget_id:
+        return session.query(models.Budget).filter(models.Budget.budget_id == budget_id).first()
+    if user_id:
+        return session.query(models.Budget).filter(models.Budget.user_id == user_id).all()
+    return None
 
-    list = []
-    for budget in budgets:
-        list.append({
-            "id": budget.budget_id,
-            "name": budget.budget_name,
-            "balance": budget.balance
-        })
+def add_new_budget(session = session, user_id = None, budget_name = ""):
+    if not user_id:
+        print(Fore.RED + "Create new budget failed: User id not provided" + Style.RESET_ALL)
+        return None
 
-    return list
+    if not budget_name:
+        print(Fore.RED + "Create new budget failed: Budget name not provided" + Style.RESET_ALL)
+        return None
 
-def get_budget_info(session, budget_id: int) -> models.Budget | None:
-    budget = session.query(models.Budget).filter(models.Budget.budget_id == budget_id).first()
+    budget = models.Budget(
+        user_id=user_id,
+        budget_name=budget_name,
+        balance=0
+    )
+    session.add(budget)
+    session.commit()
+    session.refresh(budget)
     return budget
+
+# endregion
+
+# WISHLIST
+# region
+def get_wishlist(session = session, user_id = None):
+    if user_id:
+        return session.query(models.WishList).filter(models.WishList.user_id == user_id).all()
+    return None
+
+def add_wishlist(session = session, user_id = None, cost = None, wishlist_name = ""):
+    if not user_id:
+        print(Fore.RED + "Create new whislist failed: User id not provided" + Style.RESET_ALL)
+        return None
+
+    if not wishlist_name:
+        print(Fore.RED + "Create new whislist failed: WishList name not provided" + Style.RESET_ALL)
+        return None
+    
+    if not cost:
+        print(Fore.RED + "Create new whislist failed: Cost not provided" + Style.RESET_ALL)
+        return None
+    
+
+    whislist = models.WishList(
+        user_id=user_id,
+        wish_name=wishlist_name,
+        cost = cost
+    )
+    session.add(whislist)
+    session.commit()
+    session.refresh(whislist)
+    return whislist
+
+def execute_wishlist(session = session, wishlist_id = None):
+    if wishlist_id:
+        session.query(models.WishList).filter(models.WishList.wish_id == wishlist_id).delete()
+        session.commit()
+        return True
+    return False
+# endregion
