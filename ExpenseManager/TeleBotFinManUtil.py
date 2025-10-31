@@ -591,25 +591,24 @@ def make_history_table(history: pd.DataFrame):
 html, body {{
     margin: 0;
     padding: 0;
+    display: inline-block;
     background: #ffffff;
-}}
-body {{
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 40px 0;
 }}
 .wrapper {{
     display: inline-block;
     text-align: center;
+    padding: 10px;
+    margin: 0;
 }}
 .container {{
+    bdisplay: inline-block;
     background: white;
-    padding: 20px 40px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 10px 20px;
     border-radius: 12px;
     text-align: center;
-    display: inline-block;
+    box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    transform: scale(1.0);
+    transform-origin: top center;
 }}
 h2 {{
     font-family: Arial, sans-serif;
