@@ -505,6 +505,7 @@ def make_category_pie_chart(history: pd.DataFrame, category_name: str):
 
 # =================== TABLE REPORT ===================
 import imgkit
+from html2image import Html2Image
 
 HISTORY_TABLE_DIRECTORY = f"{CURRENT_DIRECTORY}/reports/transaction_history_table"
 
@@ -630,7 +631,8 @@ def make_history_table(history: pd.DataFrame):
     }
 
     save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
-    imgkit.from_string(html_full, save_path, options=options)
+    hti = Html2Image()
+    hti.screenshot(html_str=html_full, save_as=os.path.basename(save_path), output_path=HISTORY_TABLE_DIRECTORY)
     return save_path
 
 # Conversation states

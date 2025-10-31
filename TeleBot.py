@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # #CONVERSATION
     app.add_handler(scheduler.creat_event_conv_handler) # command : /create_event
     app.add_handler(scheduler.get_event_conv_handler) # command : /event
-    app.add_handler(finman.add_transaction_conv_handler) # command : /add_income
+    app.add_handler(finman.add_transaction_conv_handler) # command : /add_transaction
     app.add_handler(finman.report_conv_handler) #command : /report
     app.add_handler(finman.add_budget_conv_handler) # command : /add_budget
     app.add_handler(finman.create_budget_conv_handler) # command : /create_budget
