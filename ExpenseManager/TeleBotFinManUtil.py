@@ -632,7 +632,7 @@ def make_history_table(history: pd.DataFrame):
 
     save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
     hti = Html2Image(output_path=HISTORY_TABLE_DIRECTORY)
-    hti.screenshot(html_str=html_full, save_as=os.path.basename(save_path))
+    hti.screenshot(html_str=f"<script>window.resizeTo(document.body.scrollWidth, document.body.scrollHeight);</script>{html_full}", save_as=os.path.basename(save_path))
     return save_path
 
 # Conversation states
