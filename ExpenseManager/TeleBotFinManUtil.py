@@ -506,6 +506,7 @@ def make_category_pie_chart(history: pd.DataFrame, category_name: str):
 # =================== TABLE REPORT ===================
 import imgkit
 from html2image import Html2Image
+from PIL import Image,ImageFont,ImageDraw,ImageChops
 
 HISTORY_TABLE_DIRECTORY = f"{CURRENT_DIRECTORY}/reports/transaction_history_table"
 
@@ -645,17 +646,27 @@ table {{
         'quiet': ''
     }
 
+    def trim_whitespace(im, bg_color=(255, 255, 255), tolerance=10):
+        """Tự động cắt mép trắng (hoặc gần trắng)"""
+        bg = Image.new(im.mode, im.size, bg_color)
+        diff = ImageChops.difference(im, bg)
+        diff = ImageChops.add(diff, diff, 2.0, -tolerance)
+        bbox = diff.getbbox()
+        if bbox:
+            return im.crop(bbox)
+        return im  # nếu không phát hiện được thì giữ nguyên
+
     def screenshot_auto(hti, html_str, save_path, width=800):
         temp_name = "_temp_preview.png"
-        hti.screenshot(html_str=html_str, save_as=temp_name, size=(width, 1000))
-        from PIL import Image
+        hti.screenshot(html_str=html_str, save_as=temp_name, size=(width, 1200))
         im = Image.open(f"{hti.output_path}/{temp_name}")
-        bbox = im.getbbox()
-        cropped = im.crop(bbox)
+        cropped = trim_whitespace(im)
         cropped.save(save_path)
+        im.close()
 
-    save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
+    # ---- Sử dụng ----
     hti = Html2Image(output_path=HISTORY_TABLE_DIRECTORY)
+    save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
     screenshot_auto(hti, html_full, save_path, width=800)
     return save_path
 
@@ -727,7 +738,7 @@ get_history_conv_handler = ConversationHandler(
 )
 
 # ============== Tạo report tháng ==============
-from PIL import Image,ImageFont,ImageDraw
+
 
 REPORT_SAVE_DIRECTORY = f"{CURRENT_DIRECTORY}/reports/month_reports"
 os.makedirs(REPORT_SAVE_DIRECTORY, exist_ok=True)
