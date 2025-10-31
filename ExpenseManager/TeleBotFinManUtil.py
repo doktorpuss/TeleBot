@@ -597,6 +597,7 @@ body {{
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    padding: 40px 0;
 }}
 .wrapper {{
     display: inline-block;
@@ -644,9 +645,18 @@ table {{
         'quiet': ''
     }
 
+    def screenshot_auto(hti, html_str, save_path, width=800):
+        temp_name = "_temp_preview.png"
+        hti.screenshot(html_str=html_str, save_as=temp_name, size=(width, 1000))
+        from PIL import Image
+        im = Image.open(f"{hti.output_path}/{temp_name}")
+        bbox = im.getbbox()
+        cropped = im.crop(bbox)
+        cropped.save(save_path)
+
     save_path = f"{HISTORY_TABLE_DIRECTORY}/history_{get_this_month()}.png"
     hti = Html2Image(output_path=HISTORY_TABLE_DIRECTORY)
-    hti.screenshot(html_str=html_full, save_as=os.path.basename(save_path))
+    screenshot_auto(hti, html_full, save_path, width=800)
     return save_path
 
 # Conversation states
