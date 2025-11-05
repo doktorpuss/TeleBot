@@ -1,8 +1,9 @@
 import secrete
 from Scheduler import TeleBotScheduleUtil as scheduler
 from ExpenseManager import TeleBotFinManUtil as finman
-from telegram import Update
+from telegram import Update,InlineKeyboardButton,InlineKeyboardMarkup
 from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes,ConversationHandler
+
 
 if __name__ == '__main__':
     print("Starting IRI")
@@ -11,7 +12,6 @@ if __name__ == '__main__':
     #COMMAND
     # app.add_handler(CommandHandler('start',scheduler.start_handler))
     # app.add_handler(CommandHandler('end',scheduler.end_handler))
-    app.add_handler(CommandHandler('event',scheduler.get_event_handler))
     app.add_handler(CommandHandler('today',scheduler.CMD_today_handler))
     app.add_handler(CommandHandler('week',scheduler.CMD_week_handler))
     app.add_handler(CommandHandler('month',scheduler.CMD_month_handler))
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler('wishlist_info',finman.ask_wishlist_handler)) # command : /wishlist_info
     
     # #CONVERSATION
-    app.add_handler(scheduler.creat_event_conv_handler) # command : /create_event
+    app.add_handler(scheduler.create_event_conv_handler) # command : /create_event
     app.add_handler(scheduler.get_event_conv_handler) # command : /event
     app.add_handler(finman.add_transaction_conv_handler) # command : /add_transaction
     app.add_handler(finman.report_conv_handler) #command : /report

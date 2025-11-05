@@ -462,7 +462,7 @@ async def create_event_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("✅ Tạo sự kiện thành công")
         return ConversationHandler.END
 
-creat_event_conv_handler = ConversationHandler(
+create_event_conv_handler = ConversationHandler(
     entry_points=[CommandHandler('create_event', ask_event_info)],
     states={
         ASK_START_TIME: [MessageHandler(filters.TEXT & ~ filters.COMMAND, ask_event_start)],
