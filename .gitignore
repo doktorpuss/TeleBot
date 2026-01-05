@@ -1,7 +1,7 @@
 MessengerChatbot
 secrete.py
 secrete_IRI.py
-Scheduler/token/**.json 
+Scheduler/token/**.json
 __pycache__
 CalendarCredential.json
 TeleBot
@@ -11,5 +11,6 @@ dump.py
 expenses.db
 temp.py
 ExpenseManager/pie_chart/**
-ExpenseManager/reports/** 
+ExpenseManager/reports/**
 ExpenseManager/partial_dump.sql
+ExpenseManager/TeleBotFinManUtil_old.py
