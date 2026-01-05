@@ -62,7 +62,7 @@ pip install -r requirements.txt
 ### 1️⃣ Create the SQLite database
 Go to the `ExpenseManager` directory and run:
 ```bash
-sqlite3 expense.db < schema.sql
+sqlite3 expenses.db < schema.sql
 ```
 
 After creation, you can manually add or import initial records to tables like:
