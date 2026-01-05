@@ -445,6 +445,12 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
     total = grouped[value_col].sum()
     grouped["percentage"] = (grouped[value_col] / total * 100).round(1)
 
+    # Format tiền
+    grouped["amount_fmt"] = grouped[value_col].apply(
+        lambda x: f"{x:,.0f} VND"
+    )
+    total_fmt = f"{total:,.0f} VND"
+
     # Biểu đồ cơ bản
     chart = alt.Chart(grouped).mark_arc().encode(
         theta=alt.Theta(f"{value_col}", stack=True),
@@ -476,8 +482,68 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
         text=alt.Text(f"{group_col}:N")
     )
 
-    # Kết hợp và lưu
-    final = (pie + percent + label)
+    pie_chart = pie + percent + label
+
+    # =========================
+    # CỘT TỔNG + BẢNG CHÚ GIẢI
+    # =========================
+
+    # Tổng chi tiêu
+    total_chart = alt.Chart(
+        pd.DataFrame({"text": [f"Tổng\n{total_fmt}"]})
+    ).mark_text(
+        align="left",
+        font="Dongle",
+        fontSize=28,
+        fontWeight="bold"
+    ).encode(
+        text="text:N"
+    )
+
+    # Tên loại
+    legend_label = alt.Chart(grouped).mark_text(
+        align="left",
+        baseline="middle",
+        font="Dongle",
+        fontSize=24,
+        dx=0
+    ).encode(
+        y=alt.Y(f"{group_col}:N", sort="-x", axis=None),
+        text=alt.Text(f"{group_col}:N")
+    )
+
+    # Số tiền
+    legend_value = alt.Chart(grouped).mark_text(
+        align="right",
+        baseline="middle",
+        font="Dongle",
+        fontSize=24,
+        dx=200
+    ).encode(
+        y=alt.Y(f"{group_col}:N", sort="-x", axis=None),
+        text=alt.Text("amount_fmt:N")
+    )
+
+    legend_table = (legend_label + legend_value).properties(height=220)
+
+    legend_column = alt.vconcat(
+        total_chart,
+        legend_table,
+        spacing=10
+    )
+
+    # =========================
+    # GHÉP BIỂU ĐỒ
+    # =========================
+    final = alt.hconcat(
+        pie_chart,
+        legend_column,
+        spacing=30
+    ).configure_view(
+        stroke=None
+    )
+
+    # Lưu file
     final.save(save_path, scale_factor=4)
 
     return save_path
