@@ -13,3 +13,4 @@ temp.py
 ExpenseManager/pie_chart/**
 ExpenseManager/reports/** 
 ExpenseManager/partial_dump.sql
+ExpenseManager/TeleBotFinManUtil_old.py

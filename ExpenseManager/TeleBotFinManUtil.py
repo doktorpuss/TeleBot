@@ -658,7 +658,7 @@ table {{
 
     def screenshot_auto(hti, html_str, save_path, width=800):
         temp_name = "_temp_preview.png"
-        hti.screenshot(html_str=html_str, save_as=temp_name, size=(width, 1200))
+        hti.screenshot(html_str=html_str, save_as=temp_name, size = (1000,5000))
         im = Image.open(f"{hti.output_path}/{temp_name}")
         cropped = trim_whitespace(im)
         cropped.save(save_path)
