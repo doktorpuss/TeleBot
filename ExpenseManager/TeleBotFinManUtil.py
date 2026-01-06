@@ -533,7 +533,7 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
 
     legend_table = (legend_label + legend_value).properties(height=220)
 
-    legend_column = alt.hconcat(
+    legend_column = alt.vconcat(
         total_chart,
         legend_table,
         spacing=10
@@ -542,9 +542,9 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
     # =========================
     # GHÉP BIỂU ĐỒ
     # =========================
-    final = alt.hconcat(
-        pie_chart,
+    final = alt.vconcat(
         legend_column,
+        pie_chart,
         spacing=30
     ).configure_view(
         stroke=None
