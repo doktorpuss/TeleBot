@@ -502,25 +502,32 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
 
     # Tên loại
     legend_label = alt.Chart(grouped).mark_text(
-        align="left",
-        baseline="middle",
-        font="Dongle",
-        fontSize=24,
-        dx=0
+    align="left",
+    baseline="middle",
+    font="Dongle",
+    fontSize=24
     ).encode(
-        y=alt.Y(f"{group_col}:N", sort="-x", axis=None),
+        y=alt.Y(
+            f"{group_col}:N",
+            sort=alt.SortField(field=value_col, order="descending"),
+            axis=None
+        ),
         text=alt.Text(f"{group_col}:N")
     )
 
     # Số tiền
     legend_value = alt.Chart(grouped).mark_text(
-        align="right",
-        baseline="middle",
-        font="Dongle",
-        fontSize=24,
-        dx=200
+    align="right",
+    baseline="middle",
+    font="Dongle",
+    fontSize=24,
+    dx=200
     ).encode(
-        y=alt.Y(f"{group_col}:N", sort="-x", axis=None),
+        y=alt.Y(
+            f"{group_col}:N",
+            sort=alt.SortField(field=value_col, order="descending"),
+            axis=None
+        ),
         text=alt.Text("amount_fmt:N")
     )
 
