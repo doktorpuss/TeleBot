@@ -542,18 +542,19 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
     # =========================
     # GHÉP BIỂU ĐỒ
     # =========================
-    final = alt.vconcat(
-        legend_column,
-        pie_chart,
-        spacing=30
-    ).configure_view(
-        stroke=None
+    spacer = alt.Chart(pd.DataFrame({"x": [0]})).mark_text(
+    text=""
+    ).properties(
+        width=40
     )
 
-    final = final.configure_view(
-    stroke=None,
-    padding={"left": 40, "right": 40}
-)
+    final = alt.hconcat(
+        spacer,
+        pie_chart,
+        legend_column,
+        spacer,
+        spacing=0
+    )
 
     # Lưu file
     final.save(save_path, scale_factor=4)
