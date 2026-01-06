@@ -543,7 +543,7 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
     # GHÉP BIỂU ĐỒ
     # =========================
     spacer = alt.Chart(pd.DataFrame({"x": [0]})).mark_text(
-    text=""
+        text=""
     ).properties(
         width=40
     )
@@ -553,7 +553,9 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
         pie_chart,
         legend_column,
         spacer,
-        spacing=20
+        spacing=30
+    ).configure_view(
+        stroke=None
     )
 
     # Lưu file
