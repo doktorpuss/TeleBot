@@ -490,11 +490,11 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
 
     # Tổng chi tiêu
     total_chart = alt.Chart(
-        pd.DataFrame({"text": [f"Tổng\n{total_fmt}"]})
+        pd.DataFrame({"text": [f"Tổng chi tiêu: \n{total_fmt}"]})
     ).mark_text(
         align="left",
         font="Dongle",
-        fontSize=28,
+        fontSize=20,
         fontWeight="bold"
     ).encode(
         text="text:N"
@@ -505,7 +505,7 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
     align="left",
     baseline="middle",
     font="Dongle",
-    fontSize=24
+    fontSize=18
     ).encode(
         y=alt.Y(
             f"{group_col}:N",
@@ -520,7 +520,7 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
     align="right",
     baseline="middle",
     font="Dongle",
-    fontSize=24,
+    fontSize=18,
     dx=200
     ).encode(
         y=alt.Y(
