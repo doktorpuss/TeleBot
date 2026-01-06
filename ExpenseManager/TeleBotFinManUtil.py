@@ -884,8 +884,7 @@ async def report_other_month(update: Update, context: ContextTypes.DEFAULT_TYPE)
     print(Fore.LIGHTCYAN_EX + f"month: {month}" + Style.RESET_ALL)
 
     # Tạo báo cáo
-    # user = update.effective_user.first_name
-    user = "Quang"
+    user = update.callback_query.from_user.name
     report_path = make_monthly_report(month, user)
 
     if "User not found" in report_path:
