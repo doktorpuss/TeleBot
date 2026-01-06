@@ -553,7 +553,7 @@ def make_pie_chart(df: pd.DataFrame, group_col: str, value_col: str, save_path: 
         pie_chart,
         legend_column,
         spacer,
-        spacing=0
+        spacing=20
     )
 
     # Lưu file
