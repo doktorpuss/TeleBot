@@ -1016,7 +1016,9 @@ async def add_budget_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     # Get user id
-    user_id = crud.get_user_info(session, user_tele_id=user_tele_id).user_id
+    user_id = crud.get_user_info(session, user_tele_id=user_tele_id)
+    print(user_id)
+    user_id = user_id.user_id
     # user_id = 1 # For development
 
     # Get budget list
