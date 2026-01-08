@@ -1008,7 +1008,7 @@ async def add_budget_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.message.from_user.name
     print(Fore.LIGHTGREEN_EX + f"User: {user_name}" + Style.RESET_ALL)
     user_tele_id = update.message.from_user.id
-    print(Fore.LIGHTRED_EX + f"User: {user_name}" + Style.RESET_ALL)
+    print(Fore.LIGHTRED_EX + f"Tele ID: {user_tele_id}" + Style.RESET_ALL)
 
     if not is_user_valid(user_tele_id):
         print(Fore.LIGHTRED_EX + f"User: {user_name}| REJECTED: database unknown" + Style.RESET_ALL)
@@ -1016,9 +1016,8 @@ async def add_budget_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     # Get user id
-    user_id = crud.get_user_info(session, user_tele_id=user_tele_id)
-    print(user_id)
-    user_id = user_id.user_id
+    user_id = crud.get_user_info(session, user_tele_id=user_tele_id)[0].user_id
+    print(f"DB ID: {user_id}")
     # user_id = 1 # For development
 
     # Get budget list
