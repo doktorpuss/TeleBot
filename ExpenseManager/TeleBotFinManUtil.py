@@ -1018,7 +1018,7 @@ async def add_budget_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # user_id = 1 # For development
 
     # Get budget list
-    budget_list = crud.get_budget_info(user_id)
+    budget_list = crud.get_budget_info(user_id=user_id)
 
     # Create keyboard
     keyboard = [[InlineKeyboardButton(text=f"{budget.budget_name}: {budget.balance:,.0f} {currency}", callback_data=budget.budget_id)] for budget in budget_list]
