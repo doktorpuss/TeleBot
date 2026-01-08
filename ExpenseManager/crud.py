@@ -80,7 +80,7 @@ def get_user_info(session: Session = session, user_id: int = None, user_name: st
     if not filters:
         return None  # không có tiêu chí nào -> không query
 
-    users = query.filter(*filters).all()
+    users = query.filter(*filters).first()
     return users
 
 def add_user(session: Session, user_name: str, user_tele_id: str, email: str = None) -> models.User:
