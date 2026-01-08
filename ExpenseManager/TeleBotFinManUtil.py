@@ -924,6 +924,7 @@ async def report_this_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Nếu chọn tháng này → tạo báo cáo trực tiếp
     month = get_this_month()
     user = update.callback_query.from_user.name
+    print(user)
     report_path = make_monthly_report(month, user)
 
     if "User not found" in report_path:
@@ -966,6 +967,7 @@ async def report_other_month(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # Tạo báo cáo
     user = update.message.from_user.name
+    print(user)
     report_path = make_monthly_report(month, user)
 
     if "User not found" in report_path:
@@ -1014,7 +1016,9 @@ async def add_budget_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     # Get user id
-    user_id = crud.get_user_info(session, user_tele_id=user_tele_id)[0].user_id
+    user_id = crud.get_user_info(session, user_tele_id=user_tele_id)
+    print(user_id)
+    user_id = user_id.user_id
     # user_id = 1 # For development
 
     # Get budget list
